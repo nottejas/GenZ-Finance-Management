@@ -1,20 +1,26 @@
-import React from 'react'
-import './App.css'
-import { BrowserRouter as Router, Routes, Route} from "react-router-dom"
-import { SignedOut, SignIn, SignOutButton, SignUp } from '@clerk/clerk-react'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { SignIn, SignUp } from '@clerk/clerk-react';
+import Home from './Home'; // Import Home Page
 
 function App() {
-
   return (
     <Router>
       <Routes>
-        <Route path='login' element={<SignIn />} />
-        <Route path='signup' element={<SignUp />} />
-        <Route path='signout' element={<SignedOut />} />
-        <Route path='signoutt' element={<SignOutButton />} />
+        <Route path='/' element={<Home />} /> {/* Home Page */}
+        <Route path='/login'element={
+          <div className='flex items-center justify-center h-screen'>
+            <SignIn /> 
+            </div>}
+            /> {/* Login Page */}
+        <Route path='/signup' element={
+          <div className='flex items-center justify-center h-screen'>
+            <SignUp /> 
+            </div>}
+            /> {/* Signup Page */}
       </Routes>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;
