@@ -1,26 +1,20 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { SignIn, SignUp } from '@clerk/clerk-react';
-import Home from './Home'; // Import Home Page
-
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Home from './Home'
+import Dashboard from "./components/dashboard/Dashboard";
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path='/' element={<Home />} /> {/* Home Page */}
-        <Route path='/login'element={
-          <div className='flex items-center justify-center h-screen'>
-            <SignIn /> 
-            </div>}
-            /> {/* Login Page */}
-        <Route path='/signup' element={
-          <div className='flex items-center justify-center h-screen'>
-            <SignUp /> 
-            </div>}
-            /> {/* Signup Page */}
-      </Routes>
-    </Router>
+    <div>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes> 
+      </BrowserRouter>
+
+      <h1>Hey there</h1>
+    </div>
   );
-}
+}   
 
 export default App;
