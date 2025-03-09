@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   clerkId: {
@@ -23,8 +23,8 @@ const userSchema = new mongoose.Schema({
       tips: { type: Boolean, default: true }
     },
     display: {
-      theme: { type: String, default: 'light' },
-      currency: { type: String, default: 'USD' },
+      theme: { type: String, default: 'dark' },
+      currency: { type: String, default: 'INR' },
       language: { type: String, default: 'English' }
     },
     privacy: {
@@ -54,9 +54,13 @@ const userSchema = new mongoose.Schema({
   completedLessons: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Lesson'
-  }]
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 }, {
   timestamps: true
 });
 
-export default mongoose.model('User', userSchema); 
+module.exports = mongoose.model('User', userSchema); 
