@@ -6,7 +6,7 @@ import React from 'react'
 import { ClerkProvider, SignIn, SignUp } from '@clerk/clerk-react';
 
 
-const clerk_key = import.meta.env.VITE_CLERK_KEY;
+const clerk_key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 console.log(clerk_key);
 
