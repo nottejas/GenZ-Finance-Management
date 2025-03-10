@@ -1,1 +1,31 @@
-@import "tailwindcss";
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+:root {
+  --primary-color: #FF6B00;
+  --dark-bg: #1A0F00;
+  --darker-bg: #2A1500;
+  --border-color: #3A2500;
+}
+
+body {
+  background-color: var(--dark-bg);
+  color: #fff;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #FF8533;
+  border-color: #FF8533;
+}
+
+.bg-dark {
+  background-color: var(--darker-bg) !important;
+}
+
+.border-custom {
+  border-color: var(--border-color) !important;
+}

@@ -3,29 +3,35 @@ import { SignIn } from "@clerk/clerk-react";
 
 const Login = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome Back! 👋</h1>
-          <p className="mt-2 text-sm text-gray-600">
+    <div className="min-vh-100 d-flex align-items-center justify-content-center py-5 px-4">
+      <div className="w-100" style={{ maxWidth: '400px' }}>
+        <div className="text-center mb-4">
+          <h1 className="h2 fw-bold text-primary mb-2">Welcome Back! 👋</h1>
+          <p className="text-secondary">
             Sign in to continue managing your finances
           </p>
         </div>
         
-        <div className="mt-8">
+        <div className="mt-4">
           <SignIn 
-            routing="path" 
             path="/login"
+            routing="path"
             redirectUrl="/"
+            afterSignInUrl="/"
+            signUpUrl="/register"
             appearance={{
               elements: {
                 rootBox: "mx-auto",
-                card: "bg-white shadow-sm border border-gray-200",
-                headerTitle: "text-2xl font-bold text-gray-900",
-                headerSubtitle: "text-gray-600",
-                socialButtonsBlockButton: "border border-gray-200 hover:bg-gray-50",
-                formButtonPrimary: "bg-purple-600 hover:bg-purple-700",
-                footerActionLink: "text-purple-600 hover:text-purple-700"
+                card: "bg-dark border border-custom p-4 rounded",
+                headerTitle: "h3 fw-bold text-primary",
+                headerSubtitle: "text-secondary",
+                socialButtonsBlockButton: "btn btn-dark border-custom text-secondary w-100 mb-2",
+                formButtonPrimary: "btn btn-primary w-100",
+                footerActionLink: "text-primary",
+                formFieldInput: "form-control bg-dark border-custom text-white",
+                formFieldLabel: "text-secondary",
+                dividerLine: "border-custom",
+                dividerText: "text-secondary"
               },
             }}
           />
