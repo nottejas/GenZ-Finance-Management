@@ -1,8 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
-  const navigate = useNavigate();
   const currentTime = new Date().toLocaleString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -18,60 +16,26 @@ const Home = () => {
     <div className="container py-5">
       <div className="text-secondary mb-4">{currentTime}</div>
       
-      <div className="text-center mb-5 animate-zoom-in">
-        <h1 className="display-4 fw-bold mb-4">
-          <span className="text-white">Level Up Your</span>
-          <div className="text-gradient mt-2">Financial Game</div>
-        </h1>
-        <p className="text-secondary fs-5 mb-5">
-          Join thousands of Gen Z users managing their finances smarter
-        </p>
-        <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-          <button
-            onClick={() => navigate('/register')}
-            className="btn btn-primary btn-lg px-5 rounded-pill fw-semibold"
-          >
-            Start Your Journey
-          </button>
-          <button
-            onClick={() => navigate('/login')}
-            className="btn btn-dark btn-lg px-5 rounded-pill fw-semibold"
-          >
-            Welcome Back
-          </button>
-        </div>
-      </div>
-
-      <div className="row g-4 mb-5 stats-row">
-        <div className="col-md-3">
-          <div className="card bg-dark border-custom">
-            <div className="card-body text-center">
-              <div className="h2 fw-bold text-primary mb-2">50K+</div>
-              <div className="text-secondary">Active Users</div>
+      <h1 className="h2 fw-bold text-gradient mb-4 hero-title">Welcome Back! 👋</h1>
+      
+      <div className="row g-4 stagger-fade">
+        <div className="col-md-6">
+          <div className="stat-card bg-dark border-custom">
+            <div className="card-body">
+              <h5 className="card-title text-primary">Quick Actions</h5>
+              <div className="d-flex flex-column gap-2 mt-3">
+                <button className="btn btn-primary">Add New Transaction</button>
+                <button className="btn btn-dark">View Recent Activity</button>
+              </div>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card bg-dark border-custom">
-            <div className="card-body text-center">
-              <div className="h2 fw-bold text-primary mb-2">₹10M+</div>
-              <div className="text-secondary">Money Saved</div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-dark border-custom">
-            <div className="card-body text-center">
-              <div className="h2 fw-bold text-primary mb-2">4.9/5</div>
-              <div className="text-secondary">App Rating</div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card bg-dark border-custom">
-            <div className="card-body text-center">
-              <div className="h2 fw-bold text-primary mb-2">100K+</div>
-              <div className="text-secondary">Goals Achieved</div>
+        <div className="col-md-6">
+          <div className="stat-card bg-dark border-custom">
+            <div className="card-body">
+              <h5 className="card-title text-primary">Today's Overview</h5>
+              <h2 className="text-white mt-3">₹25,000</h2>
+              <p className="text-secondary">Available Balance</p>
             </div>
           </div>
         </div>

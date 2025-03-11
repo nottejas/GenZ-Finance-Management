@@ -3,10 +3,10 @@ import React from 'react';
 const Overview = () => {
   return (
     <div className="container py-5">
-      <h1 className="h2 fw-bold text-gradient mb-4">Financial Overview</h1>
-      <div className="row g-4 stats-row">
+      <h1 className="h2 fw-bold text-gradient mb-4 hero-title">Financial Overview</h1>
+      <div className="row g-4 stagger-fade">
         <div className="col-md-6">
-          <div className="card bg-dark border-custom">
+          <div className="stat-card bg-dark border-custom">
             <div className="card-body">
               <h5 className="card-title text-primary">Total Balance</h5>
               <h2 className="text-white">₹25,000</h2>
@@ -15,7 +15,7 @@ const Overview = () => {
           </div>
         </div>
         <div className="col-md-6">
-          <div className="card bg-dark border-custom">
+          <div className="stat-card bg-dark border-custom">
             <div className="card-body">
               <h5 className="card-title text-primary">Monthly Savings</h5>
               <h2 className="text-white">₹5,000</h2>
