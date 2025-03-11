@@ -18,10 +18,10 @@ const Home = () => {
     <div className="container py-5">
       <div className="text-secondary mb-4">{currentTime}</div>
       
-      <div className="text-center mb-5">
+      <div className="text-center mb-5 animate-zoom-in">
         <h1 className="display-4 fw-bold mb-4">
           <span className="text-white">Level Up Your</span>
-          <div className="text-primary mt-2">Financial Game</div>
+          <div className="text-gradient mt-2">Financial Game</div>
         </h1>
         <p className="text-secondary fs-5 mb-5">
           Join thousands of Gen Z users managing their finances smarter
@@ -42,29 +42,37 @@ const Home = () => {
         </div>
       </div>
 
-      <div className="row g-4 mb-5">
+      <div className="row g-4 mb-5 stats-row">
         <div className="col-md-3">
-          <div className="text-center">
-            <div className="h2 fw-bold text-primary mb-2">50K+</div>
-            <div className="text-secondary">Active Users</div>
+          <div className="card bg-dark border-custom">
+            <div className="card-body text-center">
+              <div className="h2 fw-bold text-primary mb-2">50K+</div>
+              <div className="text-secondary">Active Users</div>
+            </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="text-center">
-            <div className="h2 fw-bold text-primary mb-2">₹10M+</div>
-            <div className="text-secondary">Money Saved</div>
+          <div className="card bg-dark border-custom">
+            <div className="card-body text-center">
+              <div className="h2 fw-bold text-primary mb-2">₹10M+</div>
+              <div className="text-secondary">Money Saved</div>
+            </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="text-center">
-            <div className="h2 fw-bold text-primary mb-2">4.9/5</div>
-            <div className="text-secondary">App Rating</div>
+          <div className="card bg-dark border-custom">
+            <div className="card-body text-center">
+              <div className="h2 fw-bold text-primary mb-2">4.9/5</div>
+              <div className="text-secondary">App Rating</div>
+            </div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="text-center">
-            <div className="h2 fw-bold text-primary mb-2">100K+</div>
-            <div className="text-secondary">Goals Achieved</div>
+          <div className="card bg-dark border-custom">
+            <div className="card-body text-center">
+              <div className="h2 fw-bold text-primary mb-2">100K+</div>
+              <div className="text-secondary">Goals Achieved</div>
+            </div>
           </div>
         </div>
       </div>

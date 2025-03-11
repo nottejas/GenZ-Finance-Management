@@ -3,8 +3,8 @@ import React from 'react';
 const Overview = () => {
   return (
     <div className="container py-5">
-      <h1 className="h2 fw-bold text-primary mb-4">Financial Overview</h1>
-      <div className="row g-4">
+      <h1 className="h2 fw-bold text-gradient mb-4">Financial Overview</h1>
+      <div className="row g-4 stats-row">
         <div className="col-md-6">
           <div className="card bg-dark border-custom">
             <div className="card-body">
