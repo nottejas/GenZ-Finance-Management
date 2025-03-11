@@ -1,16 +1,22 @@
 import React from 'react';
 import { SignIn } from "@clerk/clerk-react";
+import { useLocation } from 'react-router-dom';
 
 const Login = () => {
+  const location = useLocation();
+  const isSSOCallback = location.pathname.includes('/sso-callback');
+
   return (
     <div className="min-vh-100 d-flex align-items-center justify-content-center py-5 px-4">
       <div className="w-100" style={{ maxWidth: '400px' }}>
-        <div className="text-center mb-4">
-          <h1 className="h2 fw-bold text-primary mb-2">Welcome Back! 👋</h1>
-          <p className="text-secondary">
-            Sign in to continue managing your finances
-          </p>
-        </div>
+        {!isSSOCallback && (
+          <div className="text-center mb-4">
+            <h1 className="h2 fw-bold text-primary mb-2">Welcome Back! 👋</h1>
+            <p className="text-secondary">
+              Sign in to continue managing your finances
+            </p>
+          </div>
+        )}
         
         <div className="mt-4">
           <SignIn 
