@@ -6,7 +6,18 @@ const User = require('../models/User');
 // Get all lessons
 router.get('/', async (req, res) => {
   try {
-    const lessons = await Lesson.find();
+    const { category, difficulty, sort = 'createdAt', order = 'desc' } = req.query;
+    
+    // Build filter object
+    const filter = {};
+    if (category) filter.category = category;
+    if (difficulty) filter.difficulty = difficulty;
+    
+    // Determine sort order
+    const sortOptions = {};
+    sortOptions[sort] = order === 'asc' ? 1 : -1;
+    
+    const lessons = await Lesson.find(filter).sort(sortOptions);
     res.json(lessons);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -29,7 +40,8 @@ router.get('/:id', async (req, res) => {
 // Get lessons by category
 router.get('/category/:category', async (req, res) => {
   try {
-    const lessons = await Lesson.find({ category: req.params.category });
+    const { category } = req.params;
+    const lessons = await Lesson.find({ category }).sort({ difficulty: 1 });
     res.json(lessons);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -49,7 +61,7 @@ router.get('/user/:userId/completed', async (req, res) => {
   }
 });
 
-// Create lesson
+// Create a new lesson
 router.post('/', async (req, res) => {
   const lesson = new Lesson({
     title: req.body.title,
@@ -57,11 +69,15 @@ router.post('/', async (req, res) => {
     category: req.body.category,
     difficulty: req.body.difficulty,
     points: req.body.points,
+    duration: req.body.duration,
     content: req.body.content,
-    resources: req.body.resources,
-    quiz: req.body.quiz
+    resources: req.body.resources || [],
+    quiz: req.body.quiz || {
+      questions: [],
+      passingScore: 70
+    }
   });
-
+  
   try {
     const newLesson = await lesson.save();
     res.status(201).json(newLesson);
@@ -70,76 +86,100 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Complete a lesson
-router.post('/:id/complete', async (req, res) => {
+// Update a lesson
+router.put('/:id', async (req, res) => {
   try {
-    const lesson = await Lesson.findById(req.params.id);
-    if (!lesson) {
+    const updatedLesson = await Lesson.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedLesson) {
       return res.status(404).json({ message: 'Lesson not found' });
     }
     
-    // Add lesson to user's completed lessons
-    await User.findByIdAndUpdate(
-      req.body.userId,
-      { 
-        $addToSet: { completedLessons: lesson._id },
-        $inc: { 
-          points: lesson.points,
-          'stats.lessonsCompleted': 1
-        }
-      }
-    );
+    res.json(updatedLesson);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// Delete a lesson
+router.delete('/:id', async (req, res) => {
+  try {
+    const deletedLesson = await Lesson.findByIdAndDelete(req.params.id);
     
-    res.json({ 
-      message: 'Lesson completed successfully',
-      pointsEarned: lesson.points
-    });
+    if (!deletedLesson) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+    
+    res.json({ message: 'Lesson deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// Submit quiz answers
-router.post('/:id/quiz', async (req, res) => {
+// Get lessons by difficulty
+router.get('/difficulty/:difficulty', async (req, res) => {
   try {
-    const lesson = await Lesson.findById(req.params.id);
+    const { difficulty } = req.params;
+    const lessons = await Lesson.find({ difficulty }).sort({ createdAt: -1 });
+    res.json(lessons);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Submit quiz answers and get results
+router.post('/:id/quiz-submit', async (req, res) => {
+  try {
+    const lessonId = req.params.id;
+    const { userId, answers } = req.body;
+    
+    if (!userId || !answers || !Array.isArray(answers)) {
+      return res.status(400).json({ message: 'Invalid submission data' });
+    }
+    
+    const lesson = await Lesson.findById(lessonId);
+    
     if (!lesson) {
       return res.status(404).json({ message: 'Lesson not found' });
     }
     
     // Calculate score
-    const userAnswers = req.body.answers;
     let correctAnswers = 0;
+    const results = [];
     
     lesson.quiz.questions.forEach((question, index) => {
-      if (userAnswers[index] === question.correctAnswer) {
+      const userAnswer = answers[index];
+      const isCorrect = userAnswer === question.correctAnswer;
+      
+      if (isCorrect) {
         correctAnswers++;
       }
+      
+      results.push({
+        question: question.question,
+        userAnswer,
+        correctAnswer: question.correctAnswer,
+        isCorrect,
+        explanation: question.explanation
+      });
     });
     
-    const score = (correctAnswers / lesson.quiz.questions.length) * 100;
+    const totalQuestions = lesson.quiz.questions.length;
+    const score = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
     const passed = score >= lesson.quiz.passingScore;
     
-    // If passed, mark lesson as completed
-    if (passed) {
-      await User.findByIdAndUpdate(
-        req.body.userId,
-        { 
-          $addToSet: { completedLessons: lesson._id },
-          $inc: { 
-            points: lesson.points,
-            'stats.lessonsCompleted': 1
-          }
-        }
-      );
-    }
+    // TODO: Update user's completed lessons and award points if passed
     
-    res.json({ 
+    res.json({
       score,
       passed,
       correctAnswers,
-      totalQuestions: lesson.quiz.questions.length,
-      pointsEarned: passed ? lesson.points : 0
+      totalQuestions,
+      results
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
