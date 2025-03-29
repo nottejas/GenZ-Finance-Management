@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const lessonSchema = new mongoose.Schema({
   title: {
@@ -11,52 +11,57 @@ const lessonSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['basics', 'investing', 'saving', 'credit'],
-    required: true
+    required: true,
+    enum: ['saving', 'investing', 'budgeting', 'financial_literacy', 'taxes', 'credit']
   },
-  content: {
+  difficulty: {
     type: String,
+    required: true,
+    enum: ['beginner', 'intermediate', 'advanced']
+  },
+  points: {
+    type: Number,
     required: true
   },
   duration: {
     type: Number, // in minutes
     required: true
   },
-  difficulty: {
+  content: {
     type: String,
-    enum: ['Beginner', 'Intermediate', 'Advanced'],
     required: true
   },
-  points: {
-    type: Number,
-    required: true
-  },
-  thumbnail: String,
-  order: Number,
-  isPublished: {
-    type: Boolean,
-    default: false
-  },
-  completions: [{
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    completedAt: {
-      type: Date,
-      default: Date.now
-    },
-    quiz: {
-      score: Number,
-      attempts: Number
+  resources: [{
+    title: String,
+    url: String,
+    type: {
+      type: String,
+      enum: ['article', 'video', 'podcast', 'tool']
     }
   }],
-  quiz: [{
-    question: String,
-    options: [String],
-    correctAnswer: Number,
-    explanation: String
-  }]
+  quiz: {
+    questions: [{
+      question: {
+        type: String,
+        required: true
+      },
+      options: [String],
+      correctAnswer: {
+        type: Number, // Index of the correct option
+        required: true
+      },
+      explanation: String
+    }],
+    passingScore: {
+      type: Number,
+      required: true,
+      default: 70
+    }
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 }, {
   timestamps: true
 });
@@ -65,4 +70,4 @@ const lessonSchema = new mongoose.Schema({
 lessonSchema.index({ category: 1, order: 1 });
 lessonSchema.index({ 'completions.userId': 1 });
 
-export default mongoose.model('Lesson', lessonSchema); 
+module.exports = mongoose.model('Lesson', lessonSchema); 

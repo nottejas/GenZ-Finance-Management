@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const challengeSchema = new mongoose.Schema({
   title: {
@@ -9,15 +9,15 @@ const challengeSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  type: {
+  category: {
     type: String,
-    enum: ['Saving', 'Budgeting', 'Investment', 'Education'],
-    required: true
+    required: true,
+    enum: ['saving', 'investing', 'budgeting', 'financial_literacy']
   },
   difficulty: {
     type: String,
-    enum: ['Easy', 'Medium', 'Hard'],
-    required: true
+    required: true,
+    enum: ['beginner', 'intermediate', 'advanced']
   },
   points: {
     type: Number,
@@ -27,30 +27,29 @@ const challengeSchema = new mongoose.Schema({
     type: Number, // in days
     required: true
   },
-  requirements: {
-    type: Map,
-    of: mongoose.Schema.Types.Mixed
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  participants: [{
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+  steps: [{
+    description: {
+      type: String,
+      required: true
     },
-    progress: {
-      type: Number,
-      default: 0
-    },
-    startDate: Date,
-    endDate: Date,
     completed: {
       type: Boolean,
       default: false
     }
-  }]
+  }],
+  tips: [String],
+  resources: [{
+    title: String,
+    url: String,
+    type: {
+      type: String,
+      enum: ['article', 'video', 'podcast', 'tool']
+    }
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 }, {
   timestamps: true
 });
@@ -59,4 +58,4 @@ const challengeSchema = new mongoose.Schema({
 challengeSchema.index({ isActive: 1 });
 challengeSchema.index({ 'participants.userId': 1 });
 
-export default mongoose.model('Challenge', challengeSchema); 
+module.exports = mongoose.model('Challenge', challengeSchema); 

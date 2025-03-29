@@ -6,10 +6,10 @@ import Register from './components/auth/Register';
 
 // Lazy load route components
 const Home = lazy(() => import('./components/Home'));
-const Overview = lazy(() => import('./components/Overview'));
+const Overview = lazy(() => import('./components/dashboard/FinancialOverview'));
 const Challenges = lazy(() => import('./components/Challenges'));
 const Education = lazy(() => import('./components/Education'));
-const Settings = lazy(() => import('./components/Settings'));
+const Settings = lazy(() => import('./components/settings/Settings'));
 
 function App() {
   return (

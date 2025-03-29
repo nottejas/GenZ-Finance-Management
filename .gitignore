@@ -11,11 +11,14 @@ node_modules/
 .env.production.local
 backend/.env
 frontend/.env
+**/.env*
+!**/.env.example
 
 # Build outputs
 /build
 /dist
 /out
+**/dist
 
 # Debug logs
 npm-debug.log*
@@ -37,4 +40,5 @@ yarn-error.log*
 
 # Misc
 .DS_Store
-*.pem 
+*.pem
+**/.DS_Store 
