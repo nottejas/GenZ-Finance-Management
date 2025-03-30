@@ -20,6 +20,26 @@ A modern, gamified financial management application designed specifically for Ge
 - 🛣️ React Router for navigation
 - 🔄 Real-time data updates
 
+## Transaction Management Updates
+
+Recent updates implemented:
+
+1. **Real-time Data Updates**:
+   - Added global state management with React Context API
+   - Transactions now update across all components in real-time
+   - Financial metrics (balance, income, expenses) recalculate automatically
+
+2. **Components Updated**:
+   - `Home` component displays real-time balance
+   - `FinancialOverview` reflects current financial status
+   - `TransactionForm` connects to the global transaction state
+
+3. **Technical Implementation**:
+   - Created TransactionContext for centralized state management
+   - Implemented transaction CRUD operations with API interaction
+   - Added automatic financial metric calculations
+   - Integrated real-time expense category breakdown
+
 ## Getting Started 🚀
 
 ### Prerequisites
@@ -95,4 +115,38 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Clerk for authentication
 - MongoDB for database
 - React and Vite teams
-- Tailwind CSS team 
+- Tailwind CSS team
+
+## Setup & Running
+
+### Backend
+```
+cd backend
+npm install
+cp .env.example .env  # Configure with your MongoDB credentials
+npm run dev
+```
+
+### Frontend
+```
+cd frontend
+npm install
+cp .env.example .env  # Configure with API keys
+npm run dev
+```
+
+## API Configuration
+
+The frontend will proxy API requests to the backend. The configuration is in `vite.config.js`:
+
+```js
+server: {
+  proxy: {
+    '/api': {
+      target: 'http://localhost:5000',
+      changeOrigin: true,
+      secure: false
+    }
+  }
+}
+``` 

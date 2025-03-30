@@ -301,14 +301,14 @@ const Challenges = () => {
     
     return (
       <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 shadow-xl">
+        <div className="bg-blue dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 shadow-xl">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               {selectedChallenge.title} - Knowledge Check
             </h3>
             <button 
               onClick={() => setShowQuiz(false)} 
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+              className="text-gray-500 hover:text-gray-700 dark:text-red-800 dark:hover:text-white"
             >
               ✕
             </button>

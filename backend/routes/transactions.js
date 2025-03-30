@@ -1,79 +1,83 @@
 const express = require('express');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
-const mongoose = require('mongoose');
+const { requireAuth } = require('../middleware/auth');
 
 // Get all transactions for a user
-router.get('/user/:userId', async (req, res) => {
+router.get('/user/:userId', requireAuth, async (req, res) => {
   try {
     const { userId } = req.params;
-    const { 
-      startDate, 
-      endDate, 
-      type, 
-      category, 
-      minAmount, 
-      maxAmount,
-      sort = 'date',
-      order = 'desc',
-      limit = 50,
-      page = 1
-    } = req.query;
+    
+    // Make sure user can only access their own transactions
+    if (req.auth.userId !== userId) {
+      return res.status(403).json({ message: 'Unauthorized access to transactions' });
+    }
+    
+    // Get query parameters
+    const { type, category, startDate, endDate, search, page = 1, limit = 20, sort = 'date', order = 'desc' } = req.query;
     
     // Build filter object
     const filter = { userId };
     
-    // Date range filter
+    if (type) {
+      filter.type = type;
+    }
+    
+    if (category) {
+      filter.category = category;
+    }
+    
     if (startDate || endDate) {
       filter.date = {};
-      if (startDate) filter.date.$gte = new Date(startDate);
-      if (endDate) filter.date.$lte = new Date(endDate);
+      if (startDate) {
+        filter.date.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        filter.date.$lte = new Date(endDate);
+      }
     }
     
-    // Transaction type filter
-    if (type) filter.type = type;
-    
-    // Category filter
-    if (category) filter.category = category;
-    
-    // Amount range filter
-    if (minAmount || maxAmount) {
-      filter.amount = {};
-      if (minAmount) filter.amount.$gte = Number(minAmount);
-      if (maxAmount) filter.amount.$lte = Number(maxAmount);
+    if (search) {
+      filter.$or = [
+        { description: { $regex: search, $options: 'i' } },
+        { merchant: { $regex: search, $options: 'i' } },
+        { tags: { $in: [new RegExp(search, 'i')] } }
+      ];
     }
+    
+    // Build sort object
+    const sortObj = {};
+    sortObj[sort] = order === 'asc' ? 1 : -1;
     
     // Calculate pagination
-    const skip = (Number(page) - 1) * Number(limit);
+    const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    // Determine sort order
-    const sortOptions = {};
-    sortOptions[sort] = order === 'asc' ? 1 : -1;
-    
-    // Execute query with pagination and sorting
+    // Find transactions with filters, sorting and pagination
     const transactions = await Transaction.find(filter)
-      .sort(sortOptions)
+      .sort(sortObj)
       .skip(skip)
-      .limit(Number(limit));
+      .limit(parseInt(limit));
     
-    // Get total count for pagination info
+    // Get total count for pagination
     const total = await Transaction.countDocuments(filter);
     
     res.json({
       transactions,
       pagination: {
         total,
-        page: Number(page),
-        pages: Math.ceil(total / Number(limit))
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / parseInt(limit))
       }
     });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
 // Get a specific transaction
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
     
@@ -81,68 +85,109 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Transaction not found' });
     }
     
+    // Make sure user can only access their own transactions
+    if (transaction.userId !== req.auth.userId) {
+      return res.status(403).json({ message: 'Unauthorized access to transaction' });
+    }
+    
     res.json(transaction);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    console.error('Error fetching transaction:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
 // Create a new transaction
-router.post('/', async (req, res) => {
-  const transaction = new Transaction({
-    userId: req.body.userId,
-    amount: req.body.amount,
-    type: req.body.type,
-    category: req.body.category,
-    description: req.body.description,
-    date: req.body.date || new Date(),
-    merchant: req.body.merchant,
-    tags: req.body.tags,
-    isRecurring: req.body.isRecurring || false,
-    recurringDetails: req.body.recurringDetails,
-    attachment: req.body.attachment,
-    location: req.body.location
-  });
-  
+router.post('/', requireAuth, async (req, res) => {
   try {
-    const newTransaction = await transaction.save();
+    const { 
+      amount, type, category, description, date, merchant, 
+      tags, recurring, recurringDetails 
+    } = req.body;
+    
+    // Create new transaction
+    const newTransaction = new Transaction({
+      userId: req.auth.userId,
+      amount,
+      type,
+      category,
+      description,
+      date: new Date(date),
+      merchant,
+      tags,
+      recurring,
+      recurringDetails
+    });
+    
+    await newTransaction.save();
+    
     res.status(201).json(newTransaction);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+  } catch (error) {
+    console.error('Error creating transaction:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
 // Update a transaction
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   try {
-    const updatedTransaction = await Transaction.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const transaction = await Transaction.findById(req.params.id);
     
-    if (!updatedTransaction) {
+    if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
     
-    res.json(updatedTransaction);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+    // Make sure user can only update their own transactions
+    if (transaction.userId !== req.auth.userId) {
+      return res.status(403).json({ message: 'Unauthorized access to transaction' });
+    }
+    
+    // Extract fields to update
+    const {
+      amount, type, category, description, date, merchant,
+      tags, recurring, recurringDetails
+    } = req.body;
+    
+    // Update transaction
+    transaction.amount = amount;
+    transaction.type = type;
+    transaction.category = category;
+    transaction.description = description;
+    transaction.date = new Date(date);
+    transaction.merchant = merchant;
+    transaction.tags = tags;
+    transaction.recurring = recurring;
+    transaction.recurringDetails = recurringDetails;
+    
+    await transaction.save();
+    
+    res.json(transaction);
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
 // Delete a transaction
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const deletedTransaction = await Transaction.findByIdAndDelete(req.params.id);
+    const transaction = await Transaction.findById(req.params.id);
     
-    if (!deletedTransaction) {
+    if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
     
-    res.json({ message: 'Transaction deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    // Make sure user can only delete their own transactions
+    if (transaction.userId !== req.auth.userId) {
+      return res.status(403).json({ message: 'Unauthorized access to transaction' });
+    }
+    
+    await transaction.remove();
+    
+    res.json({ success: true, message: 'Transaction deleted' });
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

@@ -1,10 +1,27 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const transactionSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+const RecurringDetailsSchema = new Schema({
+  frequency: {
+    type: String,
+    enum: ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'],
     required: true
+  },
+  startDate: {
+    type: Date,
+    default: Date.now
+  },
+  endDate: Date,
+  dayOfMonth: Number,
+  dayOfWeek: Number,
+  interval: Number
+}, { _id: false });
+
+const TransactionSchema = new Schema({
+  userId: {
+    type: String,
+    required: true,
+    index: true
   },
   amount: {
     type: Number,
@@ -12,8 +29,8 @@ const transactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    required: true,
-    enum: ['income', 'expense', 'transfer', 'saving']
+    enum: ['income', 'expense', 'transfer'],
+    required: true
   },
   category: {
     type: String,
@@ -25,56 +42,47 @@ const transactionSchema = new mongoose.Schema({
   },
   date: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: true
   },
   merchant: {
     type: String,
     trim: true
   },
-  tags: [{
-    type: String,
-    trim: true
-  }],
-  isRecurring: {
+  tags: [String],
+  recurring: {
     type: Boolean,
     default: false
   },
-  recurringDetails: {
-    frequency: {
-      type: String,
-      enum: ['daily', 'weekly', 'monthly', 'yearly'],
-    },
-    endDate: Date,
-    nextOccurrence: Date
-  },
+  recurringDetails: RecurringDetailsSchema,
   attachment: {
-    type: String // URL to receipt/invoice
+    url: String,
+    filename: String,
+    mimeType: String
   },
   location: {
-    type: {
-      type: String,
-      enum: ['Point']
-    },
-    coordinates: {
-      type: [Number] // [longitude, latitude]
-    },
+    latitude: Number,
+    longitude: Number,
     address: String
   },
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-// Add indexes for better query performance
-transactionSchema.index({ userId: 1, date: -1 });
-transactionSchema.index({ userId: 1, category: 1 });
-transactionSchema.index({ userId: 1, type: 1 });
+// Create indexes for common queries
+TransactionSchema.index({ userId: 1, date: -1 });
+TransactionSchema.index({ userId: 1, type: 1 });
+TransactionSchema.index({ userId: 1, category: 1 });
+TransactionSchema.index({ userId: 1, date: -1, type: 1 });
 
 // Static methods
-transactionSchema.statics.getMonthlySummary = async function(userId, year, month) {
+TransactionSchema.statics.getMonthlySummary = async function(userId, year, month) {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0);
   
@@ -95,7 +103,7 @@ transactionSchema.statics.getMonthlySummary = async function(userId, year, month
   ]);
 };
 
-transactionSchema.statics.getCategoryBreakdown = async function(userId, year, month) {
+TransactionSchema.statics.getCategoryBreakdown = async function(userId, year, month) {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0);
   
@@ -120,4 +128,4 @@ transactionSchema.statics.getCategoryBreakdown = async function(userId, year, mo
   ]);
 };
 
-module.exports = mongoose.model('Transaction', transactionSchema); 
+module.exports = mongoose.model('Transaction', TransactionSchema); 

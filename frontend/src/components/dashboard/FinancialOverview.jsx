@@ -1,145 +1,245 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { FaArrowUp, FaArrowDown, FaPiggyBank, FaWallet, FaChartPie, FaMoneyBillWave, FaEllipsisH } from 'react-icons/fa';
+import { useTransactions } from '../../context/TransactionContext';
 
-const FinancialOverview = ({ userData }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
+const FinancialOverview = () => {
+  const { financialStats, transactions } = useTransactions();
+  const [expenseBreakdown, setExpenseBreakdown] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState([]);
 
-  // Format number to Indian currency format
-  const formatToINR = (number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(number);
+  useEffect(() => {
+    // Update recent transactions
+    const sortedTransactions = [...transactions].sort((a, b) => 
+      new Date(b.date) - new Date(a.date)
+    ).slice(0, 5);
+    
+    setRecentTransactions(sortedTransactions);
+    
+    // Calculate expense breakdown
+    calculateExpenseBreakdown(transactions);
+  }, [transactions]);
+
+  const calculateExpenseBreakdown = (transactionData) => {
+    // Get current month
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Get current month expenses
+    const currentMonthExpenses = transactionData.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      return transaction.type === 'expense' && 
+             transactionDate.getMonth() === currentMonth && 
+             transactionDate.getFullYear() === currentYear;
+    });
+    
+    // Group by category
+    const categoryGroups = {};
+    let totalExpenses = 0;
+    
+    currentMonthExpenses.forEach(transaction => {
+      if (!categoryGroups[transaction.category]) {
+        categoryGroups[transaction.category] = 0;
+      }
+      categoryGroups[transaction.category] += transaction.amount;
+      totalExpenses += transaction.amount;
+    });
+    
+    // Generate color palette
+    const colors = ['#FF6B00', '#FF8533', '#FFA366', '#FFBB80', '#FFAD73', '#FFD1AA'];
+    
+    // Convert to array format
+    const breakdown = Object.keys(categoryGroups).map((category, index) => {
+      const amount = categoryGroups[category];
+      const percentage = totalExpenses ? (amount / totalExpenses) * 100 : 0;
+      
+      return {
+        category,
+        amount,
+        percentage,
+        color: colors[index % colors.length]
+      };
+    }).sort((a, b) => b.amount - a.amount);
+    
+    setExpenseBreakdown(breakdown);
   };
 
-  // Example data - in real app, this would come from your backend
-  const financialData = {
-    currentBalance: 250075,
-    monthlyIncome: 400000,
-    monthlySavings: 80000,
-    spendingCategories: [
-      { name: 'Food & Dining', amount: 60000, trend: 'up', emoji: '🍔' },
-      { name: 'Shopping', amount: 45000, trend: 'down', emoji: '🛍️' },
-      { name: 'Entertainment', amount: 20000, trend: 'stable', emoji: '🎮' },
-      { name: 'Transport', amount: 15000, trend: 'up', emoji: '🚗' },
-    ],
-    subscriptions: [
-      { name: 'Netflix', amount: 1499, dueDate: '2024-03-20' },
-      { name: 'Spotify', amount: 999, dueDate: '2024-03-15' },
-    ],
-    bnplPayments: [
-      { item: 'iPhone 15', totalAmount: 99900, remainingAmount: 74925, nextPayment: '2024-03-25' },
-    ],
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
-
-  const aiInsights = [
-    "🎯 You're on track to meet your savings goal this month!",
-    "💡 Tip: Your food spending is 15% higher than last month",
-    "🎮 Challenge: Try the 'No Takeout Week' to save extra",
-  ];
 
   return (
-    <div className="space-y-6 dark:bg-gray-900">
-      {/* Balance Overview */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Current Balance</h3>
-        <div className="flex items-baseline">
-          <span className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-            {formatToINR(financialData.currentBalance)}
-          </span>
-          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Available Balance</span>
-        </div>
-        
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Monthly Income</p>
-            <p className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-              {formatToINR(financialData.monthlyIncome)}
-            </p>
+    <div className="max-w-6xl mx-auto p-6 bg-black text-white">
+      <h1 className="text-3xl font-bold mb-6">Financial Overview</h1>
+      
+      {/* Main Financial Metrics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 shadow-lg transition-all hover:shadow-xl">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-gray-400 text-sm mb-1">Total Balance</h3>
+              <div className="text-2xl font-bold">₹{financialStats.totalBalance.toLocaleString()}</div>
+            </div>
+            <div className="bg-orange-500 bg-opacity-10 w-10 h-10 rounded-full flex items-center justify-center">
+              <FaWallet className="text-orange-500 text-lg" />
+            </div>
           </div>
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Monthly Savings</p>
-            <p className="text-xl font-semibold text-green-700 dark:text-green-400">
-              {formatToINR(financialData.monthlySavings)}
-            </p>
+          <div className="text-gray-400 text-sm">
+            All accounts combined
           </div>
         </div>
-      </div>
-
-      {/* AI Insights */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">AI Insights</h3>
-        <div className="space-y-3">
-          {aiInsights.map((insight, index) => (
-            <div key={index} className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <p className="text-gray-700 dark:text-gray-200">{insight}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Spending Categories */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Spending Categories</h3>
-        <div className="space-y-4">
-          {financialData.spendingCategories.map((category) => (
-            <div key={category.name} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">{category.emoji}</span>
-                <span className="font-medium dark:text-white">{category.name}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold dark:text-white">{formatToINR(category.amount)}</span>
-                <span className={`text-sm ${
-                  category.trend === 'up' ? 'text-red-500' : 
-                  category.trend === 'down' ? 'text-green-500' : 
-                  'text-gray-500'
-                }`}>
-                  {category.trend === 'up' ? '↑' : category.trend === 'down' ? '↓' : '→'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* BNPL & Subscriptions */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Upcoming Payments</h3>
         
-        {/* BNPL */}
-        <div className="mb-6">
-          <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">Buy Now, Pay Later</h4>
-          {financialData.bnplPayments.map((payment) => (
-            <div key={payment.item} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-medium dark:text-white">{payment.item}</span>
-                <span className="text-purple-600 dark:text-purple-400 font-semibold">
-                  {formatToINR(payment.remainingAmount)}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Next payment on {new Date(payment.nextPayment).toLocaleDateString()}
-              </p>
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 shadow-lg transition-all hover:shadow-xl">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-gray-400 text-sm mb-1">Monthly Income</h3>
+              <div className="text-2xl font-bold">₹{financialStats.monthlyIncome.toLocaleString()}</div>
             </div>
-          ))}
+            <div className="bg-orange-500 bg-opacity-10 w-10 h-10 rounded-full flex items-center justify-center">
+              <FaArrowUp className="text-orange-500 text-lg" />
+            </div>
+          </div>
+          <div className="text-gray-400 text-sm">
+            Net income this month
+          </div>
         </div>
-
-        {/* Subscriptions */}
+        
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 shadow-lg transition-all hover:shadow-xl">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-gray-400 text-sm mb-1">Monthly Expenses</h3>
+              <div className="text-2xl font-bold">₹{financialStats.monthlyExpenses.toLocaleString()}</div>
+            </div>
+            <div className="bg-orange-500 bg-opacity-10 w-10 h-10 rounded-full flex items-center justify-center">
+              <FaArrowDown className="text-orange-500 text-lg" />
+            </div>
+          </div>
+          <div className="text-gray-400 text-sm">
+            Total spent this month
+          </div>
+        </div>
+        
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 shadow-lg transition-all hover:shadow-xl">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-gray-400 text-sm mb-1">Monthly Savings</h3>
+              <div className="text-2xl font-bold">₹{financialStats.monthlySavings.toLocaleString()}</div>
+            </div>
+            <div className="bg-orange-500 bg-opacity-10 w-10 h-10 rounded-full flex items-center justify-center">
+              <FaPiggyBank className="text-orange-500 text-lg" />
+            </div>
+          </div>
+          <div className="text-gray-400 text-sm">
+            {financialStats.monthlyIncome > 0 
+              ? `${Math.round((financialStats.monthlySavings / financialStats.monthlyIncome) * 100)}% of your income` 
+              : 'No income recorded'}
+          </div>
+        </div>
+      </div>
+      
+      {/* Savings Progress */}
+      <div className="mb-8">
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 shadow-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-gray-400 text-sm">Savings Goal Progress</h3>
+            <div className="bg-orange-500 bg-opacity-10 px-3 py-1 rounded-full text-sm text-orange-500">
+              {financialStats.monthlySavings > 0 
+                ? `${Math.round((financialStats.monthlySavings / financialStats.monthlyIncome) * 100)}%` 
+                : '0%'}
+            </div>
+          </div>
+          
+          <div className="h-2 bg-gray-800 rounded-full mb-2">
+            <div 
+              className="h-full bg-orange-500 rounded-full" 
+              style={{ 
+                width: `${financialStats.monthlySavings > 0 ? 
+                  Math.min((financialStats.monthlySavings / financialStats.monthlyIncome) * 100, 100) : 0}%` 
+              }}
+            ></div>
+          </div>
+          
+          <div className="flex justify-between text-sm text-gray-400">
+            <span>₹0</span>
+            <span>Goal: ₹{(financialStats.monthlyIncome * 0.3).toLocaleString()}</span>
+          </div>
+          
+          <div className="mt-4 text-white">
+            {financialStats.monthlySavings > 0 
+              ? (financialStats.monthlySavings >= financialStats.monthlyIncome * 0.3
+                ? "You've reached your savings goal this month! 🎉"
+                : "You're on track to meet your monthly savings goal of 30% of your income.")
+              : 'Set a savings goal to track your progress.'}
+          </div>
+        </div>
+      </div>
+      
+      {/* Expense Breakdown and Recent Transactions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Expense Breakdown */}
         <div>
-          <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">Subscriptions</h4>
-          <div className="space-y-2">
-            {financialData.subscriptions.map((sub) => (
-              <div key={sub.name} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg flex justify-between items-center">
-                <span className="dark:text-white">{sub.name}</span>
-                <div className="text-right">
-                  <p className="font-semibold dark:text-white">{formatToINR(sub.amount)}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Due {new Date(sub.dueDate).toLocaleDateString()}
-                  </p>
-                </div>
+          <h2 className="text-2xl font-bold mb-4">Expense Breakdown</h2>
+          
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 shadow-lg">
+            {expenseBreakdown.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {expenseBreakdown.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: item.color }}
+                      ></div>
+                      <span>{item.category}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>₹{item.amount.toLocaleString()}</span>
+                      <span className="text-gray-400 text-sm">({item.percentage.toFixed(1)}%)</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="text-center text-gray-400 py-8">
+                No expense data available for this month
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Recent Transactions */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Recent Transactions</h2>
+          
+          <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 shadow-lg">
+            {recentTransactions.length > 0 ? (
+              <>
+                <div className="divide-y divide-gray-800">
+                  {recentTransactions.map((transaction, index) => (
+                    <div key={index} className="p-4 flex justify-between items-center hover:bg-gray-800 transition-colors">
+                      <div>
+                        <div className="font-medium">{transaction.description}</div>
+                        <div className="text-gray-400 text-sm">
+                          {formatDate(transaction.date)} • {transaction.category}
+                        </div>
+                      </div>
+                      <div className={transaction.type === 'income' ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>
+                        {transaction.type === 'income' ? '+' : '-'}₹{transaction.amount.toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button className="w-full py-3 px-4 bg-gray-900 text-white border-t border-gray-800 hover:bg-gray-800 transition-colors">
+                  View All Transactions
+                </button>
+              </>
+            ) : (
+              <div className="text-center text-gray-400 py-8">
+                No recent transactions
+              </div>
+            )}
           </div>
         </div>
       </div>

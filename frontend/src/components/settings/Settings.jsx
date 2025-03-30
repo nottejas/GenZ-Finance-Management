@@ -1,0 +1,690 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  FaUser, FaBell, FaShieldAlt, FaCreditCard, FaExchangeAlt, 
+  FaCheck, FaToggleOn, FaToggleOff, FaDownload, FaQuestionCircle,
+  FaSave, FaSignOutAlt, FaTrash, FaCog, FaSpinner
+} from 'react-icons/fa';
+import { useSettings } from '../../context/SettingsContext';
+import { useClerk } from '@clerk/clerk-react';
+import { toast } from 'react-hot-toast';
+
+const Settings = () => {
+  const { settings, loading, error, saveSettings, toggleSetting } = useSettings();
+  const { signOut } = useClerk();
+  
+  const [activeTab, setActiveTab] = useState('profile');
+  const [formData, setFormData] = useState({
+    profile: {
+      name: '',
+      email: '',
+      phone: '',
+      currency: 'INR',
+      language: 'English',
+      darkMode: true,
+    },
+    notifications: {
+      email: true,
+      push: true,
+      sms: false,
+      marketingEmails: false
+    },
+    privacySettings: {
+      showBalances: true,
+      showActivity: true,
+      shareData: false
+    },
+    financialSettings: {
+      savingsGoal: 50000,
+      budgetReminders: true,
+      autoCategorization: true,
+      roundUpSavings: false
+    }
+  });
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Initialize form data from settings when loaded
+  useEffect(() => {
+    if (!loading && settings) {
+      setFormData({
+        profile: settings.profile || formData.profile,
+        notifications: settings.notifications || formData.notifications,
+        privacySettings: settings.privacySettings || formData.privacySettings,
+        financialSettings: settings.financialSettings || formData.financialSettings
+      });
+    }
+  }, [loading, settings]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const section = activeTab === 'profile' ? 'profile' : 
+                    activeTab === 'notifications' ? 'notifications' :
+                    activeTab === 'privacy' ? 'privacySettings' :
+                    activeTab === 'financial' ? 'financialSettings' : 'profile';
+    
+    // Handle nested properties
+    if (name.includes('.')) {
+      const [parentProp, childProp] = name.split('.');
+      setFormData({
+        ...formData,
+        [parentProp]: {
+          ...formData[parentProp],
+          [childProp]: type === 'checkbox' ? checked : value
+        }
+      });
+    } else {
+      // Handle direct properties
+      setFormData({
+        ...formData,
+        [section]: {
+          ...formData[section],
+          [name]: type === 'checkbox' ? checked : value
+        }
+      });
+    }
+  };
+
+  const handleToggleChange = (section, setting) => {
+    setFormData({
+      ...formData,
+      [section]: {
+        ...formData[section],
+        [setting]: !formData[section][setting]
+      }
+    });
+  };
+
+  const handleToggleDarkMode = () => {
+    setFormData({
+      ...formData,
+      profile: {
+        ...formData.profile,
+        darkMode: !formData.profile.darkMode
+      }
+    });
+  };
+  
+  const handleSaveChanges = async () => {
+    try {
+      setIsSaving(true);
+      setSaveSuccess(false);
+      
+      const result = await saveSettings(formData);
+      
+      if (result.success) {
+        setSaveSuccess(true);
+        toast.success('Settings saved successfully');
+      } else {
+        toast.error('Failed to save settings');
+      }
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      toast.error('An error occurred while saving settings');
+    } finally {
+      setIsSaving(false);
+      
+      // Reset success message after a few seconds
+      if (saveSuccess) {
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    }
+  };
+  
+  const handleSignOut = () => {
+    signOut();
+  };
+
+  const renderProfileSettings = () => (
+    <div className="space-y-6">
+      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">Personal Information</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="mb-5">
+            <label className="block text-gray-400 text-sm mb-2">Full Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.profile.name}
+              onChange={handleInputChange}
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+            />
+          </div>
+          
+          <div className="mb-5">
+            <label className="block text-gray-400 text-sm mb-2">Email Address</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.profile.email}
+              onChange={handleInputChange}
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+            />
+          </div>
+          
+          <div className="mb-5">
+            <label className="block text-gray-400 text-sm mb-2">Phone Number</label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.profile.phone}
+              onChange={handleInputChange}
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+            />
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">Preferences</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="mb-5">
+            <label className="block text-gray-400 text-sm mb-2">Currency</label>
+            <select
+              name="currency"
+              value={formData.profile.currency}
+              onChange={handleInputChange}
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none"
+            >
+              <option value="INR">Indian Rupee (₹)</option>
+              <option value="USD">US Dollar ($)</option>
+              <option value="EUR">Euro (€)</option>
+              <option value="GBP">British Pound (£)</option>
+            </select>
+          </div>
+          
+          <div className="mb-5">
+            <label className="block text-gray-400 text-sm mb-2">Language</label>
+            <select
+              name="language"
+              value={formData.profile.language}
+              onChange={handleInputChange}
+              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none"
+            >
+              <option value="English">English</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Tamil">Tamil</option>
+              <option value="Telugu">Telugu</option>
+              <option value="Bengali">Bengali</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="border-t border-gray-800 pt-4 mt-4">
+          <div className="flex justify-between items-center py-3">
+            <div>
+              <div className="flex items-center">
+                <span className="text-white">Dark Mode</span>
+              </div>
+              <div className="text-gray-400 text-sm mt-1">
+                Change the theme of the application
+              </div>
+            </div>
+            <div 
+              className="flex items-center cursor-pointer" 
+              onClick={handleToggleDarkMode}
+            >
+              {formData.profile.darkMode ? (
+                <FaToggleOn className="text-orange-500 text-2xl" />
+              ) : (
+                <FaToggleOff className="text-gray-500 text-2xl" />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderNotificationSettings = () => (
+    <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-bold text-white">Notification Preferences</h3>
+      </div>
+      
+      <div className="space-y-1">
+        <div className="flex justify-between items-center py-3 border-b border-gray-800">
+          <div>
+            <div className="flex items-center">
+              <span className="text-white">Email Notifications</span>
+            </div>
+            <div className="text-gray-400 text-sm mt-1">
+              Receive important updates via email
+            </div>
+          </div>
+          <div 
+            className="flex items-center cursor-pointer" 
+            onClick={() => handleToggleChange('notifications', 'email')}
+          >
+            {formData.notifications.email ? (
+              <FaToggleOn className="text-orange-500 text-2xl" />
+            ) : (
+              <FaToggleOff className="text-gray-500 text-2xl" />
+            )}
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-center py-3 border-b border-gray-800">
+          <div>
+            <div className="flex items-center">
+              <span className="text-white">Push Notifications</span>
+            </div>
+            <div className="text-gray-400 text-sm mt-1">
+              Receive real-time updates on your device
+            </div>
+          </div>
+          <div 
+            className="flex items-center cursor-pointer" 
+            onClick={() => handleToggleChange('notifications', 'push')}
+          >
+            {formData.notifications.push ? (
+              <FaToggleOn className="text-orange-500 text-2xl" />
+            ) : (
+              <FaToggleOff className="text-gray-500 text-2xl" />
+            )}
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-center py-3 border-b border-gray-800">
+          <div>
+            <div className="flex items-center">
+              <span className="text-white">SMS Notifications</span>
+            </div>
+            <div className="text-gray-400 text-sm mt-1">
+              Receive important alerts via SMS
+            </div>
+          </div>
+          <div 
+            className="flex items-center cursor-pointer" 
+            onClick={() => handleToggleChange('notifications', 'sms')}
+          >
+            {formData.notifications.sms ? (
+              <FaToggleOn className="text-orange-500 text-2xl" />
+            ) : (
+              <FaToggleOff className="text-gray-500 text-2xl" />
+            )}
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-center py-3">
+          <div>
+            <div className="flex items-center">
+              <span className="text-white">Marketing Emails</span>
+            </div>
+            <div className="text-gray-400 text-sm mt-1">
+              Receive tips, offers, and updates about new features
+            </div>
+          </div>
+          <div 
+            className="flex items-center cursor-pointer" 
+            onClick={() => handleToggleChange('notifications', 'marketingEmails')}
+          >
+            {formData.notifications.marketingEmails ? (
+              <FaToggleOn className="text-orange-500 text-2xl" />
+            ) : (
+              <FaToggleOff className="text-gray-500 text-2xl" />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPrivacySettings = () => (
+    <div className="space-y-6">
+      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">Privacy Settings</h3>
+        </div>
+        
+        <div className="space-y-1">
+          <div className="flex justify-between items-center py-3 border-b border-gray-800">
+            <div>
+              <div className="flex items-center">
+                <span className="text-white">Show Account Balances</span>
+              </div>
+              <div className="text-gray-400 text-sm mt-1">
+                Display your financial information on the dashboard
+              </div>
+            </div>
+            <div 
+              className="flex items-center cursor-pointer" 
+              onClick={() => handleToggleChange('privacySettings', 'showBalances')}
+            >
+              {formData.privacySettings.showBalances ? (
+                <FaToggleOn className="text-orange-500 text-2xl" />
+              ) : (
+                <FaToggleOff className="text-gray-500 text-2xl" />
+              )}
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center py-3 border-b border-gray-800">
+            <div>
+              <div className="flex items-center">
+                <span className="text-white">Show Activity</span>
+              </div>
+              <div className="text-gray-400 text-sm mt-1">
+                Show your recent transactions and activity
+              </div>
+            </div>
+            <div 
+              className="flex items-center cursor-pointer" 
+              onClick={() => handleToggleChange('privacySettings', 'showActivity')}
+            >
+              {formData.privacySettings.showActivity ? (
+                <FaToggleOn className="text-orange-500 text-2xl" />
+              ) : (
+                <FaToggleOff className="text-gray-500 text-2xl" />
+              )}
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center py-3">
+            <div>
+              <div className="flex items-center">
+                <span className="text-white">Share Anonymous Data</span>
+              </div>
+              <div className="text-gray-400 text-sm mt-1">
+                Allow us to use anonymized data to improve our services
+              </div>
+            </div>
+            <div 
+              className="flex items-center cursor-pointer" 
+              onClick={() => handleToggleChange('privacySettings', 'shareData')}
+            >
+              {formData.privacySettings.shareData ? (
+                <FaToggleOn className="text-orange-500 text-2xl" />
+              ) : (
+                <FaToggleOff className="text-gray-500 text-2xl" />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">Data & Privacy</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+            <span>Download My Data</span>
+            <FaDownload />
+          </button>
+          
+          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+            <span>Privacy Policy</span>
+            <FaShieldAlt />
+          </button>
+          
+          <button 
+            className="w-full p-3 flex items-center justify-between bg-red-900 hover:bg-red-800 transition-colors rounded-md text-white opacity-80"
+            onClick={() => {
+              if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                // Handle account deletion - in a real app, this would call an API
+                toast.success('Account deletion process initiated. You will receive further instructions via email.');
+              }
+            }}
+          >
+            <span>Delete My Account</span>
+            <FaTrash />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFinancialSettings = () => (
+    <div className="space-y-6">
+      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">Financial Goals</h3>
+        </div>
+        
+        <div className="mb-5">
+          <label className="block text-gray-400 text-sm mb-2">Monthly Savings Goal (₹)</label>
+          <input
+            type="number"
+            name="savingsGoal"
+            value={formData.financialSettings.savingsGoal}
+            onChange={(e) => setFormData({
+              ...formData,
+              financialSettings: {
+                ...formData.financialSettings,
+                savingsGoal: parseInt(e.target.value) || 0
+              }
+            })}
+            className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+          />
+        </div>
+        
+        <div className="space-y-1 mt-6">
+          <div className="flex justify-between items-center py-3 border-b border-gray-800">
+            <div>
+              <div className="flex items-center">
+                <span className="text-white">Budget Reminders</span>
+              </div>
+              <div className="text-gray-400 text-sm mt-1">
+                Get notifications when nearing budget limits
+              </div>
+            </div>
+            <div 
+              className="flex items-center cursor-pointer" 
+              onClick={() => handleToggleChange('financialSettings', 'budgetReminders')}
+            >
+              {formData.financialSettings.budgetReminders ? (
+                <FaToggleOn className="text-orange-500 text-2xl" />
+              ) : (
+                <FaToggleOff className="text-gray-500 text-2xl" />
+              )}
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center py-3 border-b border-gray-800">
+            <div>
+              <div className="flex items-center">
+                <span className="text-white">Auto-Categorization</span>
+              </div>
+              <div className="text-gray-400 text-sm mt-1">
+                Automatically categorize your transactions
+              </div>
+            </div>
+            <div 
+              className="flex items-center cursor-pointer" 
+              onClick={() => handleToggleChange('financialSettings', 'autoCategorization')}
+            >
+              {formData.financialSettings.autoCategorization ? (
+                <FaToggleOn className="text-orange-500 text-2xl" />
+              ) : (
+                <FaToggleOff className="text-gray-500 text-2xl" />
+              )}
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center py-3">
+            <div>
+              <div className="flex items-center">
+                <span className="text-white">Round-Up Savings</span>
+              </div>
+              <div className="text-gray-400 text-sm mt-1">
+                Round up transactions to nearest ₹10 and save the difference
+              </div>
+            </div>
+            <div 
+              className="flex items-center cursor-pointer" 
+              onClick={() => handleToggleChange('financialSettings', 'roundUpSavings')}
+            >
+              {formData.financialSettings.roundUpSavings ? (
+                <FaToggleOn className="text-orange-500 text-2xl" />
+              ) : (
+                <FaToggleOff className="text-gray-500 text-2xl" />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAccountSettings = () => (
+    <div className="space-y-6">
+      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">Account Management</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+            <span>Change Password</span>
+            <FaShieldAlt />
+          </button>
+          
+          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+            <span>Two-Factor Authentication</span>
+            <FaShieldAlt />
+          </button>
+          
+          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+            <span>Connected Accounts</span>
+            <FaExchangeAlt />
+          </button>
+          
+          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+            <span>Payment Methods</span>
+            <FaCreditCard />
+          </button>
+        </div>
+      </div>
+      
+      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">Support & Help</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+            <span>Help Center</span>
+            <FaQuestionCircle />
+          </button>
+          
+          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+            <span>Contact Support</span>
+            <FaQuestionCircle />
+          </button>
+          
+          <button 
+            onClick={handleSignOut}
+            className="w-full p-3 flex items-center justify-between bg-red-800 hover:bg-red-700 transition-colors rounded-md text-white"
+          >
+            <span>Sign Out</span>
+            <FaSignOutAlt />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'profile':
+        return renderProfileSettings();
+      case 'notifications':
+        return renderNotificationSettings();
+      case 'privacy':
+        return renderPrivacySettings();
+      case 'financial':
+        return renderFinancialSettings();
+      case 'account':
+        return renderAccountSettings();
+      default:
+        return renderProfileSettings();
+    }
+  };
+
+  // Tabs configuration
+  const tabs = [
+    { id: 'profile', label: 'Profile', icon: <FaUser /> },
+    { id: 'notifications', label: 'Notifications', icon: <FaBell /> },
+    { id: 'privacy', label: 'Privacy', icon: <FaShieldAlt /> },
+    { id: 'financial', label: 'Financial', icon: <FaCreditCard /> },
+    { id: 'account', label: 'Account', icon: <FaCog /> }
+  ];
+
+  // Render loading state
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 bg-black text-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <FaSpinner className="animate-spin text-orange-500 text-4xl mx-auto mb-4" />
+          <p className="text-gray-400">Loading your settings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto p-6 bg-black text-white min-h-screen">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
+        <p className="text-gray-400">Manage your account preferences and settings</p>
+      </div>
+      
+      {error && (
+        <div className="mb-6 bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-md">
+          {error}
+        </div>
+      )}
+      
+      <div className="flex overflow-x-auto border-b border-gray-800 mb-8 pb-1">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-6 py-3 flex items-center border-b-2 transition-all ${
+              activeTab === tab.id 
+                ? 'text-orange-500 border-orange-500' 
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            <span className="mr-2">{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+      
+      {renderTabContent()}
+      
+      <div className="mt-8 flex justify-end">
+        <button 
+          onClick={handleSaveChanges}
+          disabled={isSaving}
+          className={`bg-orange-500 text-white py-3 px-6 rounded-md flex items-center gap-2 hover:bg-orange-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed ${saveSuccess ? 'bg-green-600 hover:bg-green-700' : ''}`}
+        >
+          {isSaving ? (
+            <>
+              <FaSpinner className="animate-spin" /> Saving...
+            </>
+          ) : saveSuccess ? (
+            <>
+              <FaCheck /> Saved!
+            </>
+          ) : (
+            <>
+              <FaSave /> Save Changes
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;
