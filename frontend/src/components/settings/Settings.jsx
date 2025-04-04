@@ -43,6 +43,23 @@ const Settings = () => {
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // Get the current theme mode
+  const isDarkMode = formData.profile.darkMode;
+  
+  // Card styling based on theme
+  const cardStyle = isDarkMode 
+    ? "bg-gray-900 border border-gray-800 border-l-orange-500 border-l-4 rounded-xl p-6" 
+    : "bg-white border border-gray-200 border-l-orange-500 border-l-4 rounded-xl p-6 shadow-sm";
+  
+  const inputStyle = isDarkMode
+    ? "w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+    : "w-full p-3 bg-gray-50 border border-gray-300 text-gray-900 rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500";
+  
+  const textPrimaryColor = isDarkMode ? "text-white" : "text-gray-900";
+  const textSecondaryColor = isDarkMode ? "text-gray-400" : "text-gray-600";
+  const borderColor = isDarkMode ? "border-gray-800" : "border-gray-200";
+  const buttonBgColor = isDarkMode ? "bg-gray-800 hover:bg-gray-700" : "bg-gray-100 hover:bg-gray-200";
 
   // Initialize form data from settings when loaded
   useEffect(() => {
@@ -95,14 +112,33 @@ const Settings = () => {
     });
   };
 
-  const handleToggleDarkMode = () => {
+  const handleToggleDarkMode = async () => {
+    const newDarkModeValue = !formData.profile.darkMode;
+    
     setFormData({
       ...formData,
       profile: {
         ...formData.profile,
-        darkMode: !formData.profile.darkMode
+        darkMode: newDarkModeValue
       }
     });
+    
+    // Save the dark mode setting immediately
+    try {
+      const updatedSettings = {
+        ...settings,
+        profile: {
+          ...settings.profile,
+          darkMode: newDarkModeValue
+        }
+      };
+      
+      await saveSettings(updatedSettings);
+      toast.success(newDarkModeValue ? 'Dark mode enabled' : 'Light mode enabled');
+    } catch (err) {
+      console.error('Error saving dark mode setting:', err);
+      toast.error('Failed to save theme preference');
+    }
   };
   
   const handleSaveChanges = async () => {
@@ -137,60 +173,60 @@ const Settings = () => {
 
   const renderProfileSettings = () => (
     <div className="space-y-6">
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-white">Personal Information</h3>
+          <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Personal Information</h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="mb-5">
-            <label className="block text-gray-400 text-sm mb-2">Full Name</label>
+            <label className={`block ${textSecondaryColor} text-sm mb-2`}>Full Name</label>
             <input
               type="text"
               name="name"
               value={formData.profile.name}
               onChange={handleInputChange}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+              className={inputStyle}
             />
           </div>
           
           <div className="mb-5">
-            <label className="block text-gray-400 text-sm mb-2">Email Address</label>
+            <label className={`block ${textSecondaryColor} text-sm mb-2`}>Email Address</label>
             <input
               type="email"
               name="email"
               value={formData.profile.email}
               onChange={handleInputChange}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+              className={inputStyle}
             />
           </div>
           
           <div className="mb-5">
-            <label className="block text-gray-400 text-sm mb-2">Phone Number</label>
+            <label className={`block ${textSecondaryColor} text-sm mb-2`}>Phone Number</label>
             <input
               type="tel"
               name="phone"
               value={formData.profile.phone}
               onChange={handleInputChange}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+              className={inputStyle}
             />
           </div>
         </div>
       </div>
       
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-white">Preferences</h3>
+          <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Preferences</h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="mb-5">
-            <label className="block text-gray-400 text-sm mb-2">Currency</label>
+            <label className={`block ${textSecondaryColor} text-sm mb-2`}>Currency</label>
             <select
               name="currency"
               value={formData.profile.currency}
               onChange={handleInputChange}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none"
+              className={inputStyle}
             >
               <option value="INR">Indian Rupee (₹)</option>
               <option value="USD">US Dollar ($)</option>
@@ -200,12 +236,12 @@ const Settings = () => {
           </div>
           
           <div className="mb-5">
-            <label className="block text-gray-400 text-sm mb-2">Language</label>
+            <label className={`block ${textSecondaryColor} text-sm mb-2`}>Language</label>
             <select
               name="language"
               value={formData.profile.language}
               onChange={handleInputChange}
-              className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none"
+              className={inputStyle}
             >
               <option value="English">English</option>
               <option value="Hindi">Hindi</option>
@@ -216,13 +252,13 @@ const Settings = () => {
           </div>
         </div>
         
-        <div className="border-t border-gray-800 pt-4 mt-4">
+        <div className={`border-t ${borderColor} pt-4 mt-4`}>
           <div className="flex justify-between items-center py-3">
             <div>
               <div className="flex items-center">
-                <span className="text-white">Dark Mode</span>
+                <span className={textPrimaryColor}>Dark Mode</span>
               </div>
-              <div className="text-gray-400 text-sm mt-1">
+              <div className={`${textSecondaryColor} text-sm mt-1`}>
                 Change the theme of the application
               </div>
             </div>
@@ -243,18 +279,18 @@ const Settings = () => {
   );
 
   const renderNotificationSettings = () => (
-    <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+    <div className={cardStyle}>
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-white">Notification Preferences</h3>
+        <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Notification Preferences</h3>
       </div>
       
       <div className="space-y-1">
-        <div className="flex justify-between items-center py-3 border-b border-gray-800">
+        <div className={`flex justify-between items-center py-3 border-b ${borderColor}`}>
           <div>
             <div className="flex items-center">
-              <span className="text-white">Email Notifications</span>
+              <span className={textPrimaryColor}>Email Notifications</span>
             </div>
-            <div className="text-gray-400 text-sm mt-1">
+            <div className={`${textSecondaryColor} text-sm mt-1`}>
               Receive important updates via email
             </div>
           </div>
@@ -270,12 +306,12 @@ const Settings = () => {
           </div>
         </div>
         
-        <div className="flex justify-between items-center py-3 border-b border-gray-800">
+        <div className={`flex justify-between items-center py-3 border-b ${borderColor}`}>
           <div>
             <div className="flex items-center">
-              <span className="text-white">Push Notifications</span>
+              <span className={textPrimaryColor}>Push Notifications</span>
             </div>
-            <div className="text-gray-400 text-sm mt-1">
+            <div className={`${textSecondaryColor} text-sm mt-1`}>
               Receive real-time updates on your device
             </div>
           </div>
@@ -291,12 +327,12 @@ const Settings = () => {
           </div>
         </div>
         
-        <div className="flex justify-between items-center py-3 border-b border-gray-800">
+        <div className={`flex justify-between items-center py-3 border-b ${borderColor}`}>
           <div>
             <div className="flex items-center">
-              <span className="text-white">SMS Notifications</span>
+              <span className={textPrimaryColor}>SMS Notifications</span>
             </div>
-            <div className="text-gray-400 text-sm mt-1">
+            <div className={`${textSecondaryColor} text-sm mt-1`}>
               Receive important alerts via SMS
             </div>
           </div>
@@ -315,9 +351,9 @@ const Settings = () => {
         <div className="flex justify-between items-center py-3">
           <div>
             <div className="flex items-center">
-              <span className="text-white">Marketing Emails</span>
+              <span className={textPrimaryColor}>Marketing Emails</span>
             </div>
-            <div className="text-gray-400 text-sm mt-1">
+            <div className={`${textSecondaryColor} text-sm mt-1`}>
               Receive tips, offers, and updates about new features
             </div>
           </div>
@@ -338,18 +374,18 @@ const Settings = () => {
 
   const renderPrivacySettings = () => (
     <div className="space-y-6">
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-white">Privacy Settings</h3>
+          <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Privacy Settings</h3>
         </div>
         
         <div className="space-y-1">
-          <div className="flex justify-between items-center py-3 border-b border-gray-800">
+          <div className={`flex justify-between items-center py-3 border-b ${borderColor}`}>
             <div>
               <div className="flex items-center">
-                <span className="text-white">Show Account Balances</span>
+                <span className={textPrimaryColor}>Show Account Balances</span>
               </div>
-              <div className="text-gray-400 text-sm mt-1">
+              <div className={`${textSecondaryColor} text-sm mt-1`}>
                 Display your financial information on the dashboard
               </div>
             </div>
@@ -365,12 +401,12 @@ const Settings = () => {
             </div>
           </div>
           
-          <div className="flex justify-between items-center py-3 border-b border-gray-800">
+          <div className={`flex justify-between items-center py-3 border-b ${borderColor}`}>
             <div>
               <div className="flex items-center">
-                <span className="text-white">Show Activity</span>
+                <span className={textPrimaryColor}>Show Activity</span>
               </div>
-              <div className="text-gray-400 text-sm mt-1">
+              <div className={`${textSecondaryColor} text-sm mt-1`}>
                 Show your recent transactions and activity
               </div>
             </div>
@@ -389,9 +425,9 @@ const Settings = () => {
           <div className="flex justify-between items-center py-3">
             <div>
               <div className="flex items-center">
-                <span className="text-white">Share Anonymous Data</span>
+                <span className={textPrimaryColor}>Share Anonymous Data</span>
               </div>
-              <div className="text-gray-400 text-sm mt-1">
+              <div className={`${textSecondaryColor} text-sm mt-1`}>
                 Allow us to use anonymized data to improve our services
               </div>
             </div>
@@ -409,18 +445,18 @@ const Settings = () => {
         </div>
       </div>
       
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-white">Data & Privacy</h3>
+          <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Data & Privacy</h3>
         </div>
         
         <div className="space-y-4">
-          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
             <span>Download My Data</span>
             <FaDownload />
           </button>
           
-          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
             <span>Privacy Policy</span>
             <FaShieldAlt />
           </button>
@@ -441,16 +477,16 @@ const Settings = () => {
       </div>
     </div>
   );
-
+  
   const renderFinancialSettings = () => (
     <div className="space-y-6">
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-white">Financial Goals</h3>
+          <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Financial Goals</h3>
         </div>
         
         <div className="mb-5">
-          <label className="block text-gray-400 text-sm mb-2">Monthly Savings Goal (₹)</label>
+          <label className={`block ${textSecondaryColor} text-sm mb-2`}>Monthly Savings Goal (₹)</label>
           <input
             type="number"
             name="savingsGoal"
@@ -462,17 +498,17 @@ const Settings = () => {
                 savingsGoal: parseInt(e.target.value) || 0
               }
             })}
-            className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+            className={inputStyle}
           />
         </div>
         
         <div className="space-y-1 mt-6">
-          <div className="flex justify-between items-center py-3 border-b border-gray-800">
+          <div className={`flex justify-between items-center py-3 border-b ${borderColor}`}>
             <div>
               <div className="flex items-center">
-                <span className="text-white">Budget Reminders</span>
+                <span className={textPrimaryColor}>Budget Reminders</span>
               </div>
-              <div className="text-gray-400 text-sm mt-1">
+              <div className={`${textSecondaryColor} text-sm mt-1`}>
                 Get notifications when nearing budget limits
               </div>
             </div>
@@ -488,12 +524,12 @@ const Settings = () => {
             </div>
           </div>
           
-          <div className="flex justify-between items-center py-3 border-b border-gray-800">
+          <div className={`flex justify-between items-center py-3 border-b ${borderColor}`}>
             <div>
               <div className="flex items-center">
-                <span className="text-white">Auto-Categorization</span>
+                <span className={textPrimaryColor}>Auto-Categorization</span>
               </div>
-              <div className="text-gray-400 text-sm mt-1">
+              <div className={`${textSecondaryColor} text-sm mt-1`}>
                 Automatically categorize your transactions
               </div>
             </div>
@@ -512,9 +548,9 @@ const Settings = () => {
           <div className="flex justify-between items-center py-3">
             <div>
               <div className="flex items-center">
-                <span className="text-white">Round-Up Savings</span>
+                <span className={textPrimaryColor}>Round-Up Savings</span>
               </div>
-              <div className="text-gray-400 text-sm mt-1">
+              <div className={`${textSecondaryColor} text-sm mt-1`}>
                 Round up transactions to nearest ₹10 and save the difference
               </div>
             </div>
@@ -536,46 +572,46 @@ const Settings = () => {
 
   const renderAccountSettings = () => (
     <div className="space-y-6">
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-white">Account Management</h3>
+          <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Account Management</h3>
         </div>
         
         <div className="space-y-4">
-          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
             <span>Change Password</span>
             <FaShieldAlt />
           </button>
           
-          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
             <span>Two-Factor Authentication</span>
             <FaShieldAlt />
           </button>
           
-          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
             <span>Connected Accounts</span>
             <FaExchangeAlt />
           </button>
           
-          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
             <span>Payment Methods</span>
             <FaCreditCard />
           </button>
         </div>
       </div>
       
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-white">Support & Help</h3>
+          <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Support & Help</h3>
         </div>
         
         <div className="space-y-4">
-          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
             <span>Help Center</span>
             <FaQuestionCircle />
           </button>
           
-          <button className="w-full p-3 flex items-center justify-between bg-gray-800 hover:bg-gray-700 transition-colors rounded-md text-white">
+          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
             <span>Contact Support</span>
             <FaQuestionCircle />
           </button>
@@ -621,20 +657,20 @@ const Settings = () => {
   // Render loading state
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto p-6 bg-black text-white min-h-screen flex items-center justify-center">
+      <div className={`max-w-6xl mx-auto p-6 ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-black'} min-h-screen flex items-center justify-center`}>
         <div className="text-center">
           <FaSpinner className="animate-spin text-orange-500 text-4xl mx-auto mb-4" />
-          <p className="text-gray-400">Loading your settings...</p>
+          <p className={textSecondaryColor}>Loading your settings...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-black text-white min-h-screen">
+    <div className={`max-w-6xl mx-auto p-6 ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-black'} min-h-screen`}>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-        <p className="text-gray-400">Manage your account preferences and settings</p>
+        <h1 className={`text-3xl font-bold ${textPrimaryColor} mb-2`}>Settings</h1>
+        <p className={textSecondaryColor}>Manage your account preferences and settings</p>
       </div>
       
       {error && (
@@ -643,7 +679,7 @@ const Settings = () => {
         </div>
       )}
       
-      <div className="flex overflow-x-auto border-b border-gray-800 mb-8 pb-1">
+      <div className={`flex overflow-x-auto border-b ${borderColor} mb-8 pb-1`}>
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -651,7 +687,7 @@ const Settings = () => {
             className={`px-6 py-3 flex items-center border-b-2 transition-all ${
               activeTab === tab.id 
                 ? 'text-orange-500 border-orange-500' 
-                : 'text-gray-400 border-transparent hover:text-white'
+                : `${textSecondaryColor} border-transparent hover:${textPrimaryColor}`
             }`}
           >
             <span className="mr-2">{tab.icon}</span>
