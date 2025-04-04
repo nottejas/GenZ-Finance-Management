@@ -1,0 +1,8 @@
+[33mcommit a33836e4d25f19e7e28430a51ba011f12d39496b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/theme-mode-implementation[m[33m)[m
+Author: vaibhavilakhalani <vaibhavilakhalani1603@gmail.com>
+Date:   Fri Apr 4 11:16:44 2025 +0530
+
+    Implement functional dark/light mode theme system
+
+ backend/package-lock.json | 3 [32m+[m[31m--[m
+ 1 file changed, 1 insertion(+), 2 deletions(-)

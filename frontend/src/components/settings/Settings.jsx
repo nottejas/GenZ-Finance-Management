@@ -7,6 +7,8 @@ import {
 import { useSettings } from '../../context/SettingsContext';
 import { useClerk } from '@clerk/clerk-react';
 import { toast } from 'react-hot-toast';
+import PrivacyCenter from './PrivacyCenter';
+import AccountCenter from './AccountCenter';
 
 const Settings = () => {
   const { settings, loading, error, saveSettings, toggleSetting } = useSettings();
@@ -43,6 +45,9 @@ const Settings = () => {
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showPrivacyCenter, setShowPrivacyCenter] = useState(false);
+  const [showAccountCenter, setShowAccountCenter] = useState(false);
+  const [accountCenterTab, setAccountCenterTab] = useState('security');
   
   // Get the current theme mode
   const isDarkMode = formData.profile.darkMode;
@@ -102,14 +107,58 @@ const Settings = () => {
     }
   };
 
-  const handleToggleChange = (section, setting) => {
+  const handleToggleChange = async (section, setting) => {
+    const newValue = !formData[section][setting];
+    
+    // Update local state immediately for responsive UI
     setFormData({
       ...formData,
       [section]: {
         ...formData[section],
-        [setting]: !formData[section][setting]
+        [setting]: newValue
       }
     });
+    
+    // Save the setting immediately
+    try {
+      const updatedSettings = {
+        ...settings,
+        [section]: {
+          ...settings[section],
+          [setting]: newValue
+        }
+      };
+      
+      await saveSettings(updatedSettings);
+      
+      // Show success toast with specific message based on setting
+      let successMessage;
+      if (section === 'privacySettings') {
+        if (setting === 'showBalances') {
+          successMessage = newValue ? 'Account balances visible' : 'Account balances hidden';
+        } else if (setting === 'showActivity') {
+          successMessage = newValue ? 'Activity visible' : 'Activity hidden';
+        } else if (setting === 'shareData') {
+          successMessage = newValue ? 'Anonymous data sharing enabled' : 'Anonymous data sharing disabled';
+        }
+      } else {
+        successMessage = `Setting updated successfully`;
+      }
+      
+      toast.success(successMessage);
+    } catch (err) {
+      console.error(`Error saving setting (${section}.${setting}):`, err);
+      toast.error('Failed to save setting');
+      
+      // Revert the local state if saving failed
+      setFormData({
+        ...formData,
+        [section]: {
+          ...formData[section],
+          [setting]: !newValue
+        }
+      });
+    }
   };
 
   const handleToggleDarkMode = async () => {
@@ -169,6 +218,11 @@ const Settings = () => {
   
   const handleSignOut = () => {
     signOut();
+  };
+
+  const openAccountCenter = (tab) => {
+    setAccountCenterTab(tab);
+    setShowAccountCenter(true);
   };
 
   const renderProfileSettings = () => (
@@ -448,33 +502,44 @@ const Settings = () => {
       <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
           <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Data & Privacy</h3>
+          <button 
+            className="text-orange-500 text-sm underline"
+            onClick={() => setShowPrivacyCenter(true)}
+          >
+            Open Privacy Center
+          </button>
         </div>
         
         <div className="space-y-4">
-          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
+          <button 
+            className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}
+            onClick={() => setShowPrivacyCenter(true)}
+          >
             <span>Download My Data</span>
             <FaDownload />
           </button>
           
-          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
+          <button 
+            className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}
+            onClick={() => setShowPrivacyCenter(true)}
+          >
             <span>Privacy Policy</span>
             <FaShieldAlt />
           </button>
           
           <button 
             className="w-full p-3 flex items-center justify-between bg-red-900 hover:bg-red-800 transition-colors rounded-md text-white opacity-80"
-            onClick={() => {
-              if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                // Handle account deletion - in a real app, this would call an API
-                toast.success('Account deletion process initiated. You will receive further instructions via email.');
-              }
-            }}
+            onClick={() => setShowPrivacyCenter(true)}
           >
             <span>Delete My Account</span>
             <FaTrash />
           </button>
         </div>
       </div>
+      
+      {showPrivacyCenter && (
+        <PrivacyCenter onClose={() => setShowPrivacyCenter(false)} />
+      )}
     </div>
   );
   
@@ -575,25 +640,43 @@ const Settings = () => {
       <div className={cardStyle}>
         <div className="flex justify-between items-center mb-6">
           <h3 className={`text-xl font-bold ${textPrimaryColor}`}>Account Management</h3>
+          <button 
+            className="text-orange-500 text-sm underline"
+            onClick={() => openAccountCenter('security')}
+          >
+            Open Account Center
+          </button>
         </div>
         
         <div className="space-y-4">
-          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
+          <button 
+            className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}
+            onClick={() => openAccountCenter('security')}
+          >
             <span>Change Password</span>
             <FaShieldAlt />
           </button>
           
-          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
+          <button 
+            className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}
+            onClick={() => openAccountCenter('security')}
+          >
             <span>Two-Factor Authentication</span>
             <FaShieldAlt />
           </button>
           
-          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
+          <button 
+            className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}
+            onClick={() => openAccountCenter('connections')}
+          >
             <span>Connected Accounts</span>
             <FaExchangeAlt />
           </button>
           
-          <button className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}>
+          <button 
+            className={`w-full p-3 flex items-center justify-between ${buttonBgColor} transition-colors rounded-md ${textPrimaryColor}`}
+            onClick={() => openAccountCenter('payment')}
+          >
             <span>Payment Methods</span>
             <FaCreditCard />
           </button>
@@ -625,6 +708,13 @@ const Settings = () => {
           </button>
         </div>
       </div>
+      
+      {showAccountCenter && (
+        <AccountCenter 
+          onClose={() => setShowAccountCenter(false)} 
+          initialTab={accountCenterTab}
+        />
+      )}
     </div>
   );
 

@@ -7,18 +7,18 @@ const Register = () => {
   const isSSOCallback = location.pathname.includes('/sso-callback');
 
   return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center py-5 px-4">
-      <div className="w-100" style={{ maxWidth: '400px' }}>
+    <div className="min-h-screen w-full flex items-center justify-center bg-black py-10 px-4">
+      <div className="w-full max-w-md mx-auto">
         {!isSSOCallback && (
-          <div className="text-center mb-4">
-            <h1 className="h2 fw-bold text-primary mb-2">Create Your Account 🚀</h1>
-            <p className="text-secondary">
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-orange-500 mb-2">Create Your Account 🚀</h1>
+            <p className="text-gray-300">
               Join thousands of Gen Z users managing their finances smarter
             </p>
           </div>
         )}
         
-        <div className="mt-4">
+        <div className="mt-4 flex justify-center w-full">
           <SignUp 
             path="/register"
             routing="path"
@@ -28,12 +28,12 @@ const Register = () => {
             signInUrl="/login"
             appearance={{
               elements: {
-                rootBox: "mx-auto",
-                card: "bg-dark border border-custom p-4 rounded",
+                rootBox: "mx-auto w-full",
+                card: "bg-dark border border-custom p-4 rounded shadow-lg w-full",
                 headerTitle: "h3 fw-bold text-primary",
                 headerSubtitle: "text-secondary",
-                socialButtonsBlockButton: "btn btn-dark border-custom text-secondary w-100 mb-2",
-                formButtonPrimary: "btn btn-primary w-100",
+                socialButtonsBlockButton: "btn btn-dark border-custom text-secondary w-full mb-2",
+                formButtonPrimary: "btn btn-primary w-full",
                 footerActionLink: "text-primary",
                 formFieldInput: "form-control bg-dark border-custom text-white",
                 formFieldLabel: "text-secondary",

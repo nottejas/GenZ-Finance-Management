@@ -1,12 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { FaSort, FaEdit, FaPlus, FaSearch, FaFilter, FaArrowUp, FaArrowDown, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { 
+  FaSearch, 
+  FaFilter, 
+  FaTimes, 
+  FaSort,
+  FaEdit,
+  FaArrowUp, 
+  FaArrowDown, 
+  FaPlus, 
+  FaEllipsisH, 
+  FaPencilAlt, 
+  FaTrash,
+  FaLock,
+  FaMoneyBillWave,
+  FaChevronLeft,
+  FaChevronRight,
+  FaSpinner
+} from 'react-icons/fa';
 import { useTransactions } from '../../context/TransactionContext';
 import { useSettings } from '../../context/SettingsContext';
 import TransactionForm from './TransactionForm';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 const TransactionList = () => {
-  const { transactions, loading, fetchTransactions } = useTransactions();
+  const { transactions, loading, fetchTransactions, monthlyDeposit, deleteTransaction } = useTransactions();
   const { settings } = useSettings();
+  const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,6 +46,12 @@ const TransactionList = () => {
     total: 0,
     pages: 0
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Get privacy settings
+  const showActivity = settings?.privacySettings?.showActivity ?? true;
   
   // Get the current theme mode
   const isDarkMode = settings?.profile?.darkMode ?? true;
@@ -49,10 +75,20 @@ const TransactionList = () => {
   const tableBgColor = isDarkMode ? "bg-gray-900" : "bg-white";
   const tableHeaderBgColor = isDarkMode ? "bg-gray-800" : "bg-gray-100";
   const tableRowHoverBgColor = isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-50";
+  const tableRowHoverColor = isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-200";
 
   useEffect(() => {
-    fetchTransactions();
-  }, [filters, sort, pagination.page, pagination.limit]);
+    // Only fetch if activity viewing is allowed
+    if (showActivity) {
+      fetchTransactions();
+    } else {
+      // Redirect to settings if activity viewing is not allowed
+      // In a real app, use React Router for navigation
+      setTimeout(() => {
+        window.location.href = '/settings';
+      }, 2000);
+    }
+  }, [filters, sort, pagination.page, pagination.limit, showActivity]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -130,16 +166,71 @@ const TransactionList = () => {
     'Investments', 'Refunds', 'Other'
   ];
 
+  // New method to handle delete confirmation
+  const openDeleteConfirm = (transaction) => {
+    setTransactionToDelete(transaction);
+    setShowDeleteConfirm(true);
+  };
+
+  // Handle transaction deletion
+  const handleDeleteTransaction = async () => {
+    if (!transactionToDelete) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      await deleteTransaction(transactionToDelete.id);
+      setShowDeleteConfirm(false);
+      setTransactionToDelete(null);
+      toast.success('Transaction deleted successfully');
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error('Failed to delete transaction');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // If activity viewing is disabled, show a message
+  if (!showActivity) {
+    return (
+      <div className={`max-w-6xl mx-auto p-12 text-center ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className={cardStyle}>
+          <FaLock className={`text-5xl ${textSecondaryColor} mx-auto mb-4`} />
+          <h2 className={`text-2xl font-bold mb-4 ${textPrimaryColor}`}>Transaction History Hidden</h2>
+          <p className={`${textSecondaryColor} mb-6`}>
+            Your transaction history is currently hidden due to your privacy settings.
+          </p>
+          <button
+            className="bg-orange-500 text-white px-6 py-3 rounded-md font-medium hover:bg-orange-600 transition-colors"
+            onClick={() => window.location.href = '/settings'}
+          >
+            Adjust Privacy Settings
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`max-w-6xl mx-auto ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className={`text-3xl font-bold ${textPrimaryColor}`}>Transaction History</h1>
-        <button 
-          onClick={openAddForm}
-          className="bg-orange-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-orange-600 transition-colors"
-        >
-          <FaPlus className="mr-2" /> Add Transaction
-        </button>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+        <h1 className={`text-3xl font-bold ${textPrimaryColor} mb-4 sm:mb-0`}>Transaction History</h1>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => navigate('/overview')}
+            className={`px-4 py-2 ${monthlyDeposit > 0 ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'} text-white rounded-md flex items-center`}
+          >
+            <FaMoneyBillWave className="mr-2" /> 
+            {monthlyDeposit > 0 ? 'Update Deposit' : 'Set Monthly Deposit'}
+          </button>
+          <button 
+            onClick={openAddForm}
+            className="bg-orange-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-orange-600 transition-colors"
+          >
+            <FaPlus className="mr-2" /> Add Transaction
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -321,7 +412,7 @@ const TransactionList = () => {
               </tr>
             ) : (
               filteredTransactions.map(transaction => (
-                <tr key={transaction.id} className={tableRowHoverBgColor}>
+                <tr key={transaction.id} className={tableRowHoverColor}>
                   <td className={`px-6 py-4 whitespace-nowrap ${textPrimaryColor}`}>
                     {formatDate(transaction.date)}
                   </td>
@@ -346,12 +437,22 @@ const TransactionList = () => {
                     {transaction.type === 'income' ? '+' : '-'}₹{transaction.amount.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button 
-                      onClick={() => openEditForm(transaction)}
-                      className="text-orange-500 hover:text-orange-600"
-                    >
-                      <FaEdit />
-                    </button>
+                    <div className="flex space-x-3">
+                      <button 
+                        onClick={() => openEditForm(transaction)}
+                        className="text-orange-500 hover:text-orange-600"
+                        title="Edit"
+                      >
+                        <FaEdit />
+                      </button>
+                      <button 
+                        onClick={() => openDeleteConfirm(transaction)}
+                        className="text-red-500 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -382,6 +483,60 @@ const TransactionList = () => {
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
+          <div className={`w-full max-w-md rounded-xl p-6 ${
+            isDarkMode ? 'bg-gray-900' : 'bg-white'
+          }`}>
+            <h3 className={`text-xl font-bold mb-4 ${textPrimaryColor}`}>Confirm Deletion</h3>
+            
+            <p className={`mb-6 ${textSecondaryColor}`}>
+              Are you sure you want to delete this transaction?
+              {transactionToDelete && (
+                <span className="block mt-2 font-medium">
+                  {transactionToDelete.description} - 
+                  {transactionToDelete.type === 'income' ? '+' : '-'}
+                  ₹{transactionToDelete.amount.toLocaleString()}
+                </span>
+              )}
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className={`px-4 py-2 rounded-md ${
+                  isDarkMode 
+                    ? 'bg-gray-800 text-white hover:bg-gray-700' 
+                    : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                }`}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={handleDeleteTransaction}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-70 flex items-center"
+              >
+                {isDeleting ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <FaTrash className="mr-2" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Transaction Form Modal */}
       <TransactionForm 
