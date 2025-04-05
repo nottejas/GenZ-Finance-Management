@@ -23,6 +23,11 @@ export const TransactionProvider = ({ children }) => {
     monthlyExpenses: 0,
     monthlySavings: 0
   });
+  const [warnThresholds, setWarnThresholds] = useState({
+    critical: 10, // at 10% remaining
+    warning: 25,  // at 25% remaining
+    notice: 50    // at 50% remaining
+  });
 
   // Store token for API requests
   useEffect(() => {
@@ -40,7 +45,7 @@ export const TransactionProvider = ({ children }) => {
     storeTokenForApi();
   }, [isSignedIn, getToken]);
 
-  // Load transactions and deposit info from API when userId changes
+  // Load transactions from API when userId changes
   useEffect(() => {
     if (userId) {
       fetchTransactions();
@@ -67,29 +72,50 @@ export const TransactionProvider = ({ children }) => {
     }
   };
 
-  // Fetch monthly deposit information
+  // Fetch monthly deposit info
   const fetchMonthlyDeposit = async () => {
-    if (!userId) return;
-    
     try {
-      // In a real app, this would be a separate API endpoint
-      // For now, we'll simulate it using localStorage
-      const depositInfo = JSON.parse(localStorage.getItem(`deposit-${userId}`) || '{}');
+      const depositInfo = JSON.parse(localStorage.getItem(`deposit-${userId}`) || 'null');
       
-      if (depositInfo.amount) {
+      if (depositInfo) {
         setMonthlyDeposit(depositInfo.amount);
         setDepositDate(depositInfo.date);
         
-        // Calculate remaining balance based on expenses since deposit date
-        const expensesSinceDeposit = calculateExpensesSinceDeposit(
-          transactions, 
-          new Date(depositInfo.date)
-        );
-        
-        setRemainingBalance(depositInfo.amount - expensesSinceDeposit);
+        // Use stored remaining balance if available, otherwise calculate it
+        if (depositInfo.remainingBalance !== undefined) {
+          setRemainingBalance(depositInfo.remainingBalance);
+        } else {
+          // Calculate remaining balance based on expenses since deposit date
+          const expensesSinceDeposit = calculateExpensesSinceDeposit(
+            transactions, 
+            new Date(depositInfo.date)
+          );
+          
+          const calculatedBalance = depositInfo.amount - expensesSinceDeposit;
+          setRemainingBalance(calculatedBalance);
+          
+          // Store the calculated balance for future use
+          updateStoredRemainingBalance(calculatedBalance);
+        }
       }
     } catch (error) {
       console.error('Error fetching monthly deposit:', error);
+    }
+  };
+
+  // Update the stored remaining balance
+  const updateStoredRemainingBalance = (balance) => {
+    try {
+      const depositInfo = JSON.parse(localStorage.getItem(`deposit-${userId}`) || '{}');
+      
+      if (Object.keys(depositInfo).length > 0) {
+        localStorage.setItem(`deposit-${userId}`, JSON.stringify({
+          ...depositInfo,
+          remainingBalance: balance
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating stored remaining balance:', error);
     }
   };
 
@@ -116,12 +142,17 @@ export const TransactionProvider = ({ children }) => {
       const currentDate = new Date();
       const depositInfo = {
         amount: Number(amount),
-        date: currentDate.toISOString()
+        date: currentDate.toISOString(),
+        remainingBalance: Number(amount),
+        createdAt: currentDate.toISOString()
       };
       
       // In a real app, this would be saved to the backend
       // For now, we'll use localStorage
       localStorage.setItem(`deposit-${userId}`, JSON.stringify(depositInfo));
+      
+      // Save deposit history
+      saveDepositHistory(depositInfo);
       
       setMonthlyDeposit(amount);
       setDepositDate(currentDate.toISOString());
@@ -142,6 +173,27 @@ export const TransactionProvider = ({ children }) => {
       console.error('Error setting monthly deposit:', error);
       toast.error('Failed to set monthly deposit');
       throw error;
+    }
+  };
+  
+  // Save deposit to history
+  const saveDepositHistory = (depositInfo) => {
+    try {
+      const history = JSON.parse(localStorage.getItem(`deposit-history-${userId}`) || '[]');
+      history.push(depositInfo);
+      localStorage.setItem(`deposit-history-${userId}`, JSON.stringify(history));
+    } catch (error) {
+      console.error('Error saving deposit history:', error);
+    }
+  };
+  
+  // Get deposit history
+  const getDepositHistory = () => {
+    try {
+      return JSON.parse(localStorage.getItem(`deposit-history-${userId}`) || '[]');
+    } catch (error) {
+      console.error('Error getting deposit history:', error);
+      return [];
     }
   };
   
@@ -168,18 +220,30 @@ export const TransactionProvider = ({ children }) => {
         new Date(existingDate)
       );
       
+      // Calculate new remaining balance
+      const newRemainingBalance = Number(amount) - expensesSinceDeposit;
+      
       // Update deposit info
       const depositInfo = {
         amount: Number(amount),
-        date: existingDate // Keep the original date
+        date: existingDate, // Keep the original date
+        remainingBalance: newRemainingBalance,
+        updatedAt: new Date().toISOString()
       };
       
       // Save to localStorage
       localStorage.setItem(`deposit-${userId}`, JSON.stringify(depositInfo));
       
+      // Save to history
+      saveDepositHistory({
+        ...depositInfo,
+        type: 'update',
+        previousAmount: monthlyDeposit
+      });
+      
       // Update state
       setMonthlyDeposit(amount);
-      setRemainingBalance(amount - expensesSinceDeposit);
+      setRemainingBalance(newRemainingBalance);
       
       // Add an adjustment transaction
       const adjustmentAmount = amount - monthlyDeposit;
@@ -210,6 +274,16 @@ export const TransactionProvider = ({ children }) => {
     }
     
     try {
+      // Save to history before deleting
+      const existingDepositInfo = JSON.parse(localStorage.getItem(`deposit-${userId}`) || '{}');
+      if (Object.keys(existingDepositInfo).length > 0) {
+        saveDepositHistory({
+          ...existingDepositInfo,
+          type: 'delete',
+          deletedAt: new Date().toISOString()
+        });
+      }
+      
       // Remove from localStorage
       localStorage.removeItem(`deposit-${userId}`);
       
@@ -268,7 +342,35 @@ export const TransactionProvider = ({ children }) => {
         transactionData, 
         new Date(depositDate)
       );
-      setRemainingBalance(monthlyDeposit - expensesSinceDeposit);
+      const calculatedRemainingBalance = monthlyDeposit - expensesSinceDeposit;
+      setRemainingBalance(calculatedRemainingBalance);
+      
+      // Update stored remaining balance
+      updateStoredRemainingBalance(calculatedRemainingBalance);
+    }
+  };
+
+  // Show appropriate warning based on remaining percentage
+  const showBalanceWarning = (balance) => {
+    if (!monthlyDeposit) return;
+    
+    const remainingPercentage = (balance / monthlyDeposit) * 100;
+    
+    if (remainingPercentage <= warnThresholds.critical) {
+      toast.error(`Critical: Only ${remainingPercentage.toFixed(1)}% of your deposit remains! (₹${balance.toLocaleString()})`, {
+        duration: 6000,
+        icon: '⚠️'
+      });
+    } else if (remainingPercentage <= warnThresholds.warning) {
+      toast.error(`Warning: Only ${remainingPercentage.toFixed(1)}% of your deposit remains! (₹${balance.toLocaleString()})`, {
+        duration: 5000,
+        icon: '⚠️'
+      });
+    } else if (remainingPercentage <= warnThresholds.notice) {
+      toast.error(`Notice: ${remainingPercentage.toFixed(1)}% of your deposit remains (₹${balance.toLocaleString()})`, {
+        duration: 4000,
+        icon: '📊'
+      });
     }
   };
 
@@ -296,10 +398,11 @@ export const TransactionProvider = ({ children }) => {
         const newRemainingBalance = remainingBalance - newTransaction.amount;
         setRemainingBalance(newRemainingBalance);
         
-        // Show warning if balance is getting low
-        if (newRemainingBalance < monthlyDeposit * 0.2) {
-          toast.error(`Warning: You have only ₹${newRemainingBalance.toLocaleString()} left from your monthly deposit!`);
-        }
+        // Update stored remaining balance
+        updateStoredRemainingBalance(newRemainingBalance);
+        
+        // Show warning based on remaining balance percentage
+        showBalanceWarning(newRemainingBalance);
       }
       
       toast.success('Transaction added successfully');
@@ -336,20 +439,35 @@ export const TransactionProvider = ({ children }) => {
       const updatedTransactions = transactions.map(t => t.id === id ? updatedTransaction : t);
       calculateFinancialStats(updatedTransactions);
       
-      // Update remaining balance for expense transactions if amount changed
-      if (
-        monthlyDeposit > 0 && 
-        originalTransaction && 
-        updatedTransaction.type === 'expense'
-      ) {
-        // Calculate the difference in amount
-        const amountDifference = originalTransaction.amount - updatedTransaction.amount;
-        const newRemainingBalance = remainingBalance + amountDifference;
-        setRemainingBalance(newRemainingBalance);
+      // Update remaining balance when transaction type or amount changes
+      if (monthlyDeposit > 0 && originalTransaction) {
+        let balanceAdjustment = 0;
         
-        // Show warning if balance is getting low
-        if (newRemainingBalance < monthlyDeposit * 0.2) {
-          toast.error(`Warning: You have only ₹${newRemainingBalance.toLocaleString()} left from your monthly deposit!`);
+        // Handle transaction type changes (e.g., income -> expense)
+        if (originalTransaction.type !== updatedTransaction.type) {
+          if (originalTransaction.type === 'expense' && updatedTransaction.type !== 'expense') {
+            // An expense was changed to non-expense, add back the original amount
+            balanceAdjustment += originalTransaction.amount;
+          } else if (originalTransaction.type !== 'expense' && updatedTransaction.type === 'expense') {
+            // A non-expense was changed to expense, subtract the new amount
+            balanceAdjustment -= updatedTransaction.amount;
+          }
+        } 
+        // Handle amount changes for expenses
+        else if (updatedTransaction.type === 'expense') {
+          // Expense amount was changed, adjust by the difference
+          balanceAdjustment += originalTransaction.amount - updatedTransaction.amount;
+        }
+        
+        if (balanceAdjustment !== 0) {
+          const newRemainingBalance = remainingBalance + balanceAdjustment;
+          setRemainingBalance(newRemainingBalance);
+          
+          // Update stored remaining balance
+          updateStoredRemainingBalance(newRemainingBalance);
+          
+          // Show warning if balance is getting low
+          showBalanceWarning(newRemainingBalance);
         }
       }
       
@@ -389,7 +507,11 @@ export const TransactionProvider = ({ children }) => {
         transactionToDelete && 
         transactionToDelete.type === 'expense'
       ) {
-        setRemainingBalance(remainingBalance + transactionToDelete.amount);
+        const newRemainingBalance = remainingBalance + transactionToDelete.amount;
+        setRemainingBalance(newRemainingBalance);
+        
+        // Update stored remaining balance
+        updateStoredRemainingBalance(newRemainingBalance);
       }
       
       toast.success('Transaction deleted successfully');
@@ -416,7 +538,10 @@ export const TransactionProvider = ({ children }) => {
     remainingBalance,
     setMonthlyDepositAmount,
     updateMonthlyDeposit,
-    deleteMonthlyDeposit
+    deleteMonthlyDeposit,
+    getDepositHistory,
+    warnThresholds,
+    setWarnThresholds
   };
 
   return (

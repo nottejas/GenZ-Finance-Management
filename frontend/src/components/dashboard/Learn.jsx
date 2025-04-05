@@ -118,7 +118,7 @@ const Learn = () => {
           <span className="text-gray-400 ml-1">learning points</span>
         </div>
       </div>
-      
+
       {/* Category Tabs */}
       <div className="flex space-x-2 mb-8 overflow-x-auto pb-2">
         {categories.map(category => (
@@ -136,7 +136,7 @@ const Learn = () => {
           </button>
         ))}
       </div>
-      
+
       {/* Featured Course */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">Featured Course</h2>

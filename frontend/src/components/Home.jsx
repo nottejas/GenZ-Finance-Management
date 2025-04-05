@@ -17,7 +17,7 @@ const Home = () => {
   const isDarkMode = settings?.profile?.darkMode ?? true;
   const showBalances = settings?.privacySettings?.showBalances ?? true;
   const showActivity = settings?.privacySettings?.showActivity ?? true;
-  
+
   // Styling based on theme
   const cardStyle = isDarkMode 
     ? "bg-gray-900 border border-gray-800 border-orange-500 border-l-4 rounded-xl p-6 shadow-lg transition-all hover:shadow-xl" 
@@ -42,7 +42,7 @@ const Home = () => {
   const openTransactionForm = () => {
     setIsTransactionFormOpen(true);
   };
-
+  
   const closeTransactionForm = () => {
     setIsTransactionFormOpen(false);
   };
@@ -148,14 +148,14 @@ const Home = () => {
           {renderBalance()}
         </div>
       </div>
-      
+
       {showTransactions && showActivity && (
         <div className="mt-8">
           <TransactionList userId={userId} />
         </div>
       )}
-      
-      <TransactionForm 
+
+      <TransactionForm
         isOpen={isTransactionFormOpen} 
         onClose={closeTransactionForm} 
         userId={userId}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaTimes, FaSave, FaTrash, FaPlus, FaInfoCircle } from 'react-icons/fa';
+import { FaTimes, FaSave, FaTrash, FaPlus, FaInfoCircle, FaMinus, FaExchangeAlt, FaCalendarAlt, FaTags, FaCheck, FaReceipt, FaExclamationTriangle, FaArrowDown, FaArrowUp } from 'react-icons/fa';
 import { useTransactions } from '../../context/TransactionContext';
 import { useSettings } from '../../context/SettingsContext';
 import { toast } from 'react-hot-toast';
@@ -42,6 +42,13 @@ const TransactionForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [showRecurringOptions, setShowRecurringOptions] = useState(false);
+  const [previewBalance, setPreviewBalance] = useState(null);
+  const [balanceImpact, setBalanceImpact] = useState({
+    show: false,
+    percentage: 0,
+    critical: false,
+    warning: false
+  });
   
   // Get the current theme
   const isDarkMode = settings?.profile?.darkMode ?? true;
@@ -301,6 +308,44 @@ const TransactionForm = ({
     }
   };
 
+  // Preview impact on remaining balance when amount or type changes
+  useEffect(() => {
+    if (monthlyDeposit > 0 && formData.type === 'expense' && formData.amount) {
+      const amount = parseFloat(formData.amount);
+      if (!isNaN(amount)) {
+        let updatedBalance = remainingBalance;
+        
+        // For editing, add back the original amount first if it's an expense
+        if (currentMode === 'edit' && initialData && initialData.type === 'expense') {
+          updatedBalance += parseFloat(initialData.amount);
+        }
+        
+        // Subtract the new amount
+        updatedBalance -= amount;
+        
+        setPreviewBalance(updatedBalance);
+        
+        // Calculate impact percentage
+        const impactPercentage = (amount / monthlyDeposit) * 100;
+        const remainingPercentage = (updatedBalance / monthlyDeposit) * 100;
+        
+        setBalanceImpact({
+          show: true,
+          percentage: impactPercentage,
+          remainingPercentage: remainingPercentage,
+          critical: remainingPercentage <= 10,
+          warning: remainingPercentage > 10 && remainingPercentage <= 25
+        });
+      } else {
+        setPreviewBalance(null);
+        setBalanceImpact({ show: false, percentage: 0, critical: false, warning: false });
+      }
+    } else {
+      setPreviewBalance(null);
+      setBalanceImpact({ show: false, percentage: 0, critical: false, warning: false });
+    }
+  }, [formData.amount, formData.type, initialData, monthlyDeposit, remainingBalance, currentMode]);
+
   if (!isOpen) return null;
 
   return (
@@ -359,19 +404,34 @@ const TransactionForm = ({
             {/* Amount */}
             <div className="mb-5">
               <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Amount</label>
-              <input
-                type="number"
-                name="amount"
-                step="0.01"
-                value={formData.amount}
-                onChange={handleChange}
-                className={`w-full p-3 ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700 text-white' 
-                    : 'bg-gray-50 border-gray-300 text-gray-900'
-                } border rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
-                placeholder="Enter amount"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">₹</span>
+                <input
+                  type="number"
+                  name="amount"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={handleChange}
+                  className={`w-full p-3 pl-8 ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-700 text-white' 
+                      : 'bg-gray-50 border-gray-300 text-gray-900'
+                  } border rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
+                  placeholder="Enter amount"
+                />
+                {previewBalance !== null && (
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm">
+                    {formData.type === 'expense' ? (
+                      <FaArrowDown className={`${
+                        balanceImpact.critical ? 'text-red-500' : 
+                        balanceImpact.warning ? 'text-orange-500' : 'text-blue-500'
+                      }`} />
+                    ) : formData.type === 'income' ? (
+                      <FaArrowUp className="text-green-500" />
+                    ) : null}
+                  </span>
+                )}
+              </div>
               {errors.amount && <p className="text-red-500 text-sm mt-1">{errors.amount}</p>}
             </div>
             
@@ -603,6 +663,70 @@ const TransactionForm = ({
                     } rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                   />
                 </div>
+              </div>
+            )}
+            
+            {/* Deposit Status Bar */}
+            {monthlyDeposit > 0 && formData.type === 'expense' && (
+              <div className={`p-4 border-b border-gray-800 ${previewBalance < 0 ? 'bg-red-900/30' : 'bg-gray-800/30'}`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium mb-1">Monthly Deposit: ₹{monthlyDeposit.toLocaleString()}</p>
+                    <p className="text-sm text-gray-400">
+                      Currently remaining: ₹{remainingBalance.toLocaleString()} 
+                      ({((remainingBalance / monthlyDeposit) * 100).toFixed(1)}%)
+                    </p>
+                  </div>
+                  
+                  {balanceImpact.show && (
+                    <div className={`text-right ${balanceImpact.critical ? 'text-red-400' : balanceImpact.warning ? 'text-orange-400' : 'text-blue-400'}`}>
+                      {previewBalance !== null && (
+                        <>
+                          <p className="font-medium">
+                            After transaction: ₹{previewBalance.toLocaleString()}
+                            {previewBalance < 0 && ' (Overdraft)'}
+                          </p>
+                          <p className="text-sm">
+                            {formData.amount && `Impact: ${balanceImpact.percentage.toFixed(1)}% of deposit`}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Warning for low balance */}
+                {previewBalance !== null && balanceImpact.show && (
+                  <div className="mt-2">
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          balanceImpact.critical ? 'bg-red-500' : 
+                          balanceImpact.warning ? 'bg-orange-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${Math.max(0, Math.min(100, balanceImpact.remainingPercentage))}%` }}
+                      />
+                    </div>
+                    
+                    {balanceImpact.critical && (
+                      <p className="flex items-center gap-2 text-red-400 text-sm mt-2">
+                        <FaExclamationTriangle /> This transaction will leave you with critically low funds
+                      </p>
+                    )}
+                    
+                    {balanceImpact.warning && (
+                      <p className="flex items-center gap-2 text-orange-400 text-sm mt-2">
+                        <FaExclamationTriangle /> This transaction will significantly reduce your available funds
+                      </p>
+                    )}
+                    
+                    {previewBalance < 0 && (
+                      <p className="flex items-center gap-2 text-red-400 text-sm mt-2 font-bold">
+                        <FaExclamationTriangle /> Warning: This transaction exceeds your remaining deposit
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             
