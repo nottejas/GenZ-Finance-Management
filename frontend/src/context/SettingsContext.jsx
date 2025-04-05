@@ -61,6 +61,22 @@ export const SettingsProvider = ({ children }) => {
     }
   }, [isSignedIn, user]);
 
+  // Apply dark mode theme when settings change
+  useEffect(() => {
+    if (settings) {
+      // Apply dark mode to the document
+      if (settings.profile.darkMode) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('bg-black');
+        document.body.classList.remove('bg-white');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.remove('bg-black');
+        document.body.classList.add('bg-white');
+      }
+    }
+  }, [settings]);
+
   // Fetch settings when the user ID is available
   useEffect(() => {
     if (userId) {
