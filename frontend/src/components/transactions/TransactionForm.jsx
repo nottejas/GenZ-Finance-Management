@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FaTimes, FaSave, FaTrash, FaPlus } from 'react-icons/fa';
+import { FaTimes, FaSave, FaTrash, FaPlus, FaInfoCircle } from 'react-icons/fa';
 import { useTransactions } from '../../context/TransactionContext';
+import { useSettings } from '../../context/SettingsContext';
+import { toast } from 'react-hot-toast';
 
 const TransactionForm = ({ 
   isOpen, 
@@ -12,7 +14,14 @@ const TransactionForm = ({
   onTransactionUpdated = null,
   onTransactionDeleted = null
 }) => {
-  const { addTransaction, updateTransaction, deleteTransaction } = useTransactions();
+  const { 
+    addTransaction, 
+    updateTransaction, 
+    deleteTransaction, 
+    monthlyDeposit, 
+    remainingBalance 
+  } = useTransactions();
+  const { settings } = useSettings();
   const [formData, setFormData] = useState({
     amount: '',
     type: 'expense',
@@ -33,6 +42,18 @@ const TransactionForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [showRecurringOptions, setShowRecurringOptions] = useState(false);
+  
+  // Get the current theme
+  const isDarkMode = settings?.profile?.darkMode ?? true;
+  
+  // Styled based on the current theme
+  const infoBoxStyle = isDarkMode
+    ? "bg-blue-900/30 border border-blue-800 text-blue-200 p-4 rounded-md mb-5"
+    : "bg-blue-100 border border-blue-300 text-blue-800 p-4 rounded-md mb-5";
+  
+  const warningBoxStyle = isDarkMode
+    ? "bg-yellow-900/30 border border-yellow-800 text-yellow-200 p-4 rounded-md mb-5"
+    : "bg-yellow-100 border border-yellow-300 text-yellow-800 p-4 rounded-md mb-5";
 
   // Category options
   const categoryOptions = {
@@ -252,7 +273,7 @@ const TransactionForm = ({
   };
 
   const handleDelete = async () => {
-    if (!formData._id || currentMode !== 'edit') return;
+    if (!formData._id && !formData.id) return;
     
     if (!window.confirm('Are you sure you want to delete this transaction?')) {
       return;
@@ -261,17 +282,20 @@ const TransactionForm = ({
     setIsSubmitting(true);
     
     try {
-      await deleteTransaction(formData._id);
+      const transactionId = formData._id || formData.id;
+      await deleteTransaction(transactionId);
       if (onTransactionDeleted) {
-        onTransactionDeleted(formData._id);
+        onTransactionDeleted(transactionId);
       }
       resetForm();
       onClose();
+      toast.success('Transaction deleted successfully');
     } catch (error) {
       console.error('Error deleting transaction:', error);
       setErrors({
         submit: error.response?.data?.message || 'Failed to delete transaction. Please try again.'
       });
+      toast.error('Failed to delete transaction');
     } finally {
       setIsSubmitting(false);
     }
@@ -281,31 +305,71 @@ const TransactionForm = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-5 border-b border-gray-800">
-          <h2 className="text-xl font-bold text-white">
+      <div className={`${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto`}>
+        <div className={`flex justify-between items-center p-5 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+          <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             {currentMode === 'add' ? 'Add New Transaction' : 'Edit Transaction'}
           </h2>
           <button 
             onClick={onClose} 
-            className="text-gray-400 hover:text-white bg-transparent border-0 text-xl"
+            className={`${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} bg-transparent border-0 text-xl`}
           >
             <FaTimes />
           </button>
         </div>
         
         <div className="p-6">
+          {/* Monthly Deposit Info */}
+          {monthlyDeposit > 0 && formData.type === 'expense' && currentMode === 'add' && (
+            <div className={infoBoxStyle}>
+              <div className="flex items-start">
+                <FaInfoCircle className="mr-2 mt-1 flex-shrink-0" />
+                <div>
+                  <p className="font-medium mb-1">Monthly Deposit: ₹{monthlyDeposit.toLocaleString()}</p>
+                  <p className="text-sm">
+                    This expense will be deducted from your monthly deposit.
+                    Current remaining balance: ₹{remainingBalance.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Warning if remaining balance is low */}
+          {monthlyDeposit > 0 && formData.type === 'expense' && currentMode === 'add' && 
+           remainingBalance < monthlyDeposit * 0.3 && (
+            <div className={warningBoxStyle}>
+              <div className="flex items-start">
+                <FaInfoCircle className="mr-2 mt-1 flex-shrink-0" />
+                <div>
+                  <p className="font-medium mb-1">Low Balance Warning</p>
+                  <p className="text-sm">
+                    Your remaining balance is getting low. You have only 
+                    {remainingBalance < monthlyDeposit * 0.1 
+                      ? ' critically low ' 
+                      : ' low '} 
+                    funds left for this month.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit}>
             {/* Amount */}
             <div className="mb-5">
-              <label className="block text-gray-400 text-sm mb-2">Amount</label>
+              <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Amount</label>
               <input
                 type="number"
                 name="amount"
                 step="0.01"
                 value={formData.amount}
                 onChange={handleChange}
-                className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                className={`w-full p-3 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700 text-white' 
+                    : 'bg-gray-50 border-gray-300 text-gray-900'
+                } border rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                 placeholder="Enter amount"
               />
               {errors.amount && <p className="text-red-500 text-sm mt-1">{errors.amount}</p>}
@@ -313,18 +377,30 @@ const TransactionForm = ({
             
             {/* Transaction Type */}
             <div className="mb-5">
-              <label className="block text-gray-400 text-sm mb-2">Transaction Type</label>
+              <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Transaction Type</label>
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <button
                   type="button"
-                  className={`p-3 rounded-md ${formData.type === 'expense' ? 'bg-red-500 text-white' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}
+                  className={`p-3 rounded-md ${
+                    formData.type === 'expense' 
+                      ? 'bg-red-500 text-white' 
+                      : isDarkMode 
+                        ? 'bg-gray-800 text-gray-300 border-gray-700' 
+                        : 'bg-gray-100 text-gray-700 border-gray-300'
+                  } border`}
                   onClick={() => handleChange({ target: { name: 'type', value: 'expense' } })}
                 >
                   Expense
                 </button>
                 <button
                   type="button"
-                  className={`p-3 rounded-md ${formData.type === 'income' ? 'bg-green-500 text-white' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}
+                  className={`p-3 rounded-md ${
+                    formData.type === 'income' 
+                      ? 'bg-green-500 text-white' 
+                      : isDarkMode 
+                        ? 'bg-gray-800 text-gray-300 border-gray-700' 
+                        : 'bg-gray-100 text-gray-700 border-gray-300'
+                  } border`}
                   onClick={() => handleChange({ target: { name: 'type', value: 'income' } })}
                 >
                   Income
@@ -333,14 +409,26 @@ const TransactionForm = ({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  className={`p-3 rounded-md ${formData.type === 'transfer' ? 'bg-blue-500 text-white' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}
+                  className={`p-3 rounded-md ${
+                    formData.type === 'transfer' 
+                      ? 'bg-blue-500 text-white' 
+                      : isDarkMode 
+                        ? 'bg-gray-800 text-gray-300 border-gray-700' 
+                        : 'bg-gray-100 text-gray-700 border-gray-300'
+                  } border`}
                   onClick={() => handleChange({ target: { name: 'type', value: 'transfer' } })}
                 >
                   Transfer
                 </button>
                 <button
                   type="button"
-                  className={`p-3 rounded-md ${formData.type === 'saving' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}
+                  className={`p-3 rounded-md ${
+                    formData.type === 'saving' 
+                      ? 'bg-orange-500 text-white' 
+                      : isDarkMode 
+                        ? 'bg-gray-800 text-gray-300 border-gray-700' 
+                        : 'bg-gray-100 text-gray-700 border-gray-300'
+                  } border`}
                   onClick={() => handleChange({ target: { name: 'type', value: 'saving' } })}
                 >
                   Saving
@@ -350,12 +438,16 @@ const TransactionForm = ({
             
             {/* Category */}
             <div className="mb-5">
-              <label className="block text-gray-400 text-sm mb-2">Category</label>
+              <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Category</label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none"
+                className={`w-full p-3 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700 text-white' 
+                    : 'bg-gray-50 border-gray-300 text-gray-900'
+                } rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500 appearance-none`}
               >
                 <option value="">Select a category</option>
                 {categoryOptions[formData.type].map(option => (
@@ -367,49 +459,61 @@ const TransactionForm = ({
             
             {/* Description */}
             <div className="mb-5">
-              <label className="block text-gray-400 text-sm mb-2">Description</label>
+              <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Description</label>
               <input
                 type="text"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                className={`w-full p-3 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700 text-white' 
+                    : 'bg-gray-50 border-gray-300 text-gray-900'
+                } rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                 placeholder="Enter description"
               />
             </div>
             
             {/* Date */}
             <div className="mb-5">
-              <label className="block text-gray-400 text-sm mb-2">Date</label>
+              <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Date</label>
               <input
                 type="date"
                 name="date"
                 value={formData.date}
                 onChange={handleChange}
-                className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                className={`w-full p-3 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700 text-white' 
+                    : 'bg-gray-50 border-gray-300 text-gray-900'
+                } rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
               />
               {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
             </div>
             
             {/* Merchant */}
             <div className="mb-5">
-              <label className="block text-gray-400 text-sm mb-2">Merchant/Payee</label>
+              <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Merchant/Payee</label>
               <input
                 type="text"
                 name="merchant"
                 value={formData.merchant}
                 onChange={handleChange}
-                className="w-full p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                className={`w-full p-3 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700 text-white' 
+                    : 'bg-gray-50 border-gray-300 text-gray-900'
+                } rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                 placeholder="Enter merchant or payee"
               />
             </div>
             
             {/* Tags */}
             <div className="mb-5">
-              <label className="block text-gray-400 text-sm mb-2">Tags</label>
+              <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Tags</label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {formData.tags.map((tag, index) => (
-                  <div key={index} className="bg-orange-500 bg-opacity-10 text-orange-500 border border-orange-500 rounded-full px-3 py-1 text-sm flex items-center gap-1">
+                  <div key={index} className={`${isDarkMode ? 'bg-gray-700 border border-gray-600' : 'bg-gray-100 border border-gray-300'} text-white rounded-full px-3 py-1 text-sm flex items-center gap-1`}>
                     {tag}
                     <button 
                       type="button" 
@@ -426,14 +530,18 @@ const TransactionForm = ({
                   type="text"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
-                  className="flex-1 p-3 bg-gray-800 border border-gray-700 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                  className={`flex-1 p-3 ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-700 text-white' 
+                      : 'bg-gray-50 border-gray-300 text-gray-900'
+                  } rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                   placeholder="Add a tag"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
                 />
                 <button
                   type="button"
                   onClick={handleAddTag}
-                  className="bg-orange-500 text-white px-4 rounded-md"
+                  className={`${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'} px-4 rounded-md`}
                 >
                   <FaPlus />
                 </button>
@@ -442,7 +550,7 @@ const TransactionForm = ({
             
             {/* Recurring */}
             <div className="mb-5">
-              <label className="flex items-center cursor-pointer">
+              <label className={`flex items-center cursor-pointer ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 <input
                   type="checkbox"
                   name="isRecurring"
@@ -450,7 +558,7 @@ const TransactionForm = ({
                   onChange={handleChange}
                   className="mr-2 accent-orange-500"
                 />
-                <span className="text-white">This is a recurring transaction</span>
+                <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>This is a recurring transaction</span>
               </label>
             </div>
             
@@ -460,12 +568,16 @@ const TransactionForm = ({
                 <h3 className="font-medium text-white mb-3">Recurring Details</h3>
                 
                 <div className="mb-3">
-                  <label className="block text-gray-400 text-sm mb-2">Frequency</label>
+                  <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>Frequency</label>
                   <select
                     name="recurringDetails.frequency"
                     value={formData.recurringDetails.frequency}
                     onChange={handleChange}
-                    className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                    className={`w-full p-3 ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-gray-50 border-gray-300 text-gray-900'
+                    } rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -478,13 +590,17 @@ const TransactionForm = ({
                 </div>
                 
                 <div className="mb-3">
-                  <label className="block text-gray-400 text-sm mb-2">End Date (Optional)</label>
+                  <label className={`block ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-2`}>End Date (Optional)</label>
                   <input
                     type="date"
                     name="recurringDetails.endDate"
                     value={formData.recurringDetails.endDate}
                     onChange={handleChange}
-                    className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                    className={`w-full p-3 ${
+                      isDarkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-gray-50 border-gray-300 text-gray-900'
+                    } rounded-md focus:border-orange-500 focus:ring-1 focus:ring-orange-500`}
                   />
                 </div>
               </div>
@@ -498,13 +614,13 @@ const TransactionForm = ({
             )}
             
             {/* Buttons */}
-            <div className="flex justify-between mt-6">
+            <div className="mt-6 flex justify-between">
               {currentMode === 'edit' && (
-                <button
+                <button 
                   type="button"
                   onClick={handleDelete}
                   disabled={isSubmitting}
-                  className="bg-red-500 text-white py-3 px-5 rounded-md flex items-center gap-2 disabled:opacity-50"
+                  className={`${isDarkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white py-3 px-5 rounded-md flex items-center gap-2 disabled:opacity-50`}
                 >
                   <FaTrash /> Delete
                 </button>
@@ -513,7 +629,7 @@ const TransactionForm = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`bg-orange-500 text-white py-3 px-5 rounded-md flex items-center gap-2 disabled:opacity-50 ${currentMode === 'edit' ? '' : 'ml-auto'}`}
+                className={`${isDarkMode ? 'bg-orange-500 hover:bg-orange-600' : 'bg-orange-500 hover:bg-orange-600'} text-white py-3 px-5 rounded-md flex items-center gap-2 disabled:opacity-50 ${currentMode === 'edit' ? '' : 'ml-auto'}`}
               >
                 <FaSave /> {isSubmitting ? 'Saving...' : 'Save'}
               </button>

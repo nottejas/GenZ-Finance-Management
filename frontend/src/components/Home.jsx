@@ -3,15 +3,20 @@ import TransactionForm from './transactions/TransactionForm';
 import TransactionList from './transactions/TransactionList';
 import { useTransactions } from '../context/TransactionContext';
 import { useSettings } from '../context/SettingsContext';
+import { FaEyeSlash, FaLock, FaMoneyBillWave } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
   const [showTransactions, setShowTransactions] = useState(false);
-  const { financialStats } = useTransactions();
+  const { financialStats, monthlyDeposit } = useTransactions();
   const { settings } = useSettings();
+  const navigate = useNavigate();
   
-  // Get the current theme mode
+  // Get the current theme mode and privacy settings
   const isDarkMode = settings?.profile?.darkMode ?? true;
+  const showBalances = settings?.privacySettings?.showBalances ?? true;
+  const showActivity = settings?.privacySettings?.showActivity ?? true;
   
   // Styling based on theme
   const cardStyle = isDarkMode 
@@ -41,9 +46,49 @@ const Home = () => {
   const closeTransactionForm = () => {
     setIsTransactionFormOpen(false);
   };
+  
+  const navigateToOverview = () => {
+    navigate('/overview');
+  };
 
   const toggleTransactionsList = () => {
+    if (!showActivity) {
+      // Show a message that activity is hidden due to privacy settings
+      return;
+    }
     setShowTransactions(!showTransactions);
+  };
+
+  // Function to render balance based on privacy settings
+  const renderBalance = () => {
+    if (showBalances) {
+      return (
+        <>
+          <div className={`text-4xl font-bold mt-4 mb-1 ${textPrimaryColor}`}>₹{financialStats.totalBalance.toLocaleString()}</div>
+          <div className={textSecondaryColor}>Available Balance</div>
+          
+          {monthlyDeposit > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-700">
+              <div className={`text-sm ${textSecondaryColor}`}>Monthly Deposit</div>
+              <div className={`text-xl font-medium ${textPrimaryColor}`}>₹{monthlyDeposit.toLocaleString()}</div>
+            </div>
+          )}
+        </>
+      );
+    } else {
+      return (
+        <div className="text-center py-4">
+          <FaEyeSlash className={`text-4xl ${textSecondaryColor} mx-auto mb-2`} />
+          <div className={textSecondaryColor}>Balance hidden</div>
+          <button 
+            className="mt-2 text-orange-500 text-sm underline"
+            onClick={() => window.location.href = '/settings'} // In a real app, use React Router
+          >
+            Change in Privacy Settings
+          </button>
+        </div>
+      );
+    }
   };
 
   return (
@@ -62,23 +107,49 @@ const Home = () => {
             >
               Add New Transaction
             </button>
+            
             <button 
-              className={`${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-gray-100 border-gray-300 hover:bg-gray-200'} py-3 px-5 rounded-md border w-full transition-colors ${textPrimaryColor}`}
-              onClick={toggleTransactionsList}
+              className={`py-3 px-5 rounded-md font-bold w-full transition-colors ${
+                monthlyDeposit > 0 
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
+              }`}
+              onClick={navigateToOverview}
             >
-              {showTransactions ? 'Hide Transactions' : 'View Recent Activity'}
+              <div className="flex items-center justify-center">
+                <FaMoneyBillWave className="mr-2" />
+                {monthlyDeposit > 0 ? 'Update Monthly Deposit' : 'Set Monthly Deposit'}
+              </div>
+            </button>
+            
+            <button 
+              className={`${!showActivity ? 'opacity-50 cursor-not-allowed' : ''} ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-gray-100 border-gray-300 hover:bg-gray-200'} py-3 px-5 rounded-md border w-full transition-colors ${textPrimaryColor}`}
+              onClick={() => {
+                if (showActivity) {
+                  toggleTransactionsList();
+                } else {
+                  window.location.href = '/settings'; // In a real app, use React Router
+                }
+              }}
+            >
+              {!showActivity ? (
+                <span className="flex items-center justify-center">
+                  <FaLock className="mr-2" /> Activity Hidden
+                </span>
+              ) : (
+                showTransactions ? 'Hide Transactions' : 'View Recent Activity'
+              )}
             </button>
           </div>
         </div>
         
         <div className={cardStyle}>
           <h2 className="text-xl font-bold text-orange-500 mb-4">Today's Overview</h2>
-          <div className={`text-4xl font-bold mt-4 mb-1 ${textPrimaryColor}`}>₹{financialStats.totalBalance.toLocaleString()}</div>
-          <div className={textSecondaryColor}>Available Balance</div>
+          {renderBalance()}
         </div>
       </div>
       
-      {showTransactions && (
+      {showTransactions && showActivity && (
         <div className="mt-8">
           <TransactionList userId={userId} />
         </div>
