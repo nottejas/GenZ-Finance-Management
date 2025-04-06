@@ -6,6 +6,7 @@ import React from 'react'
 import { ClerkProvider } from '@clerk/clerk-react';
 import { TransactionProvider } from './context/TransactionContext';
 import { SettingsProvider } from './context/SettingsContext';
+import EducationProvider from './context/EducationContext';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter } from 'react-router-dom';
 
@@ -29,27 +30,29 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <TransactionProvider>
           <SettingsProvider>
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#333',
-                  color: '#fff',
-                },
-                success: {
+            <EducationProvider>
+              <Toaster 
+                position="top-right"
+                toastOptions={{
+                  duration: 3000,
                   style: {
-                    background: 'rgba(40, 167, 69, 0.9)',
+                    background: '#333',
+                    color: '#fff',
                   },
-                },
-                error: {
-                  style: {
-                    background: 'rgba(220, 53, 69, 0.9)',
+                  success: {
+                    style: {
+                      background: 'rgba(40, 167, 69, 0.9)',
+                    },
                   },
-                },
-              }}
-            />
-            <App />
+                  error: {
+                    style: {
+                      background: 'rgba(220, 53, 69, 0.9)',
+                    },
+                  },
+                }}
+              />
+              <App />
+            </EducationProvider>
           </SettingsProvider>
         </TransactionProvider>
       </BrowserRouter>
